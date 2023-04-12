@@ -77,9 +77,9 @@ public class DreamCatcherService extends Service {
         getSystemService(NotificationManager.class).createNotificationChannel(channel);
 
         startForeground(1, new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(androidx.leanback.R.drawable.lb_ic_pause)
+                .setSmallIcon(R.drawable.ic_stat_computer)
                 .setContentTitle("Dream Catcher")
-                .setContentText("running...")
+                .setContentText("Watching out for long daydreams")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .build());
     }
