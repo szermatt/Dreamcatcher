@@ -5,7 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
-import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffTask;
@@ -14,7 +14,7 @@ import java.util.concurrent.Executor;
 
 /**
  * A placeholder activity for the application; its main functionality is in the service.
- * */
+ */
 public class TvActivity extends Activity {
     private static final String TAG = "DreamCatcher";
 
@@ -26,7 +26,7 @@ public class TvActivity extends Activity {
         final Executor inBackground = DreamCatcherApplication.inBackground(this);
         final Handler onMain = DreamCatcherApplication.onMain(this);
 
-        Button button = findViewById(R.id.power_off);
+        ImageButton button = findViewById(R.id.power_off);
         button.setOnClickListener(v -> {
             Toast.makeText(this, "Power Off Requested", Toast.LENGTH_LONG).show();
             inBackground.execute(() -> {
