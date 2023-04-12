@@ -11,7 +11,7 @@ import org.jivesoftware.smack.packet.IQ;
 import java.util.Map;
 import java.util.UUID;
 
-public class MessageAuth {
+class MessageAuth {
     public static String MIME_TYPE = "vnd.logitech.connect/vnd.logitech.pair";
 
     /*
@@ -25,7 +25,7 @@ public class MessageAuth {
 
         @Override
         protected Map<String, Object> getChildElementPairs() {
-            return ImmutableMap.<String, Object> builder() //
+            return ImmutableMap.<String, Object>builder() //
                     .put("method", "pair")
                     .put("name", generateUniqueId() + "#" + getDeviceIdentifier())
                     .build();
@@ -60,7 +60,7 @@ public class MessageAuth {
 
         @Override
         protected Map<String, Object> getChildElementPairs() {
-            return ImmutableMap.<String, Object> builder() //
+            return ImmutableMap.<String, Object>builder() //
                     .put("serverIdentity", serverIdentity)
                     .put("hubId", hubId)
                     .put("identity", identity)

@@ -7,7 +7,7 @@ import org.jivesoftware.smack.packet.IQ;
 
 import java.util.Map;
 
-public class MessageStartActivity {
+class MessageStartActivity {
     public static final String MIME_TYPE = "vnd.logitech.harmony/vnd.logitech.harmony.engine?startactivity";
     public static final String MIME_TYPE2 = "harmony.engine?startActivity";
 
@@ -15,7 +15,7 @@ public class MessageStartActivity {
      * Request
      */
     public static class StartActivityRequest extends IrCommand {
-        private int activityId;
+        private final int activityId;
 
         public StartActivityRequest(int activityId) {
             super(MIME_TYPE);
@@ -24,7 +24,7 @@ public class MessageStartActivity {
 
         @Override
         protected Map<String, Object> getChildElementPairs() {
-            return ImmutableMap.<String, Object> builder() //
+            return ImmutableMap.<String, Object>builder() //
                     .put("activityId", activityId)
                     .put("timestamp", generateTimestamp())
                     .build();
@@ -41,7 +41,7 @@ public class MessageStartActivity {
 
         @Override
         protected Map<String, Object> getChildElementPairs() {
-            return ImmutableMap.<String, Object> builder() //
+            return ImmutableMap.<String, Object>builder() //
                     .build();
         }
     }
@@ -55,11 +55,11 @@ public class MessageStartActivity {
             return Jackson.OBJECT_MAPPER.convertValue(parseKeyValuePairs(statusCode, errorString, contents),
                     StartActivityReply.class);
         }
-        
+
         @Override
-        public boolean validResponseCode(String code){
-        	//sometimes the start activity will return a 401 if a device is not setup correctly
-        	return super.validResponseCode(code) || code.equals("401");
+        public boolean validResponseCode(String code) {
+            //sometimes the start activity will return a 401 if a device is not setup correctly
+            return super.validResponseCode(code) || code.equals("401");
         }
     }
 

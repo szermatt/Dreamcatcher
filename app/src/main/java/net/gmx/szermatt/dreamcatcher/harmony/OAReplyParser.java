@@ -11,22 +11,20 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public abstract class OAReplyParser {
+abstract class OAReplyParser {
+    /*
+     * FIXME: This parser could be far cleaner than it is, given the possibility of the pseudo-json components
+     * containing colons, and the structure of them
+     */
+    static final Pattern kvRE = Pattern.compile("(.*?)=(.*)");
     static Set<String> validResponses = new HashSet<>();
+
     static {
         validResponses.add("100");
         validResponses.add("200");
         validResponses.add("506"); // Bluetooth not connected
         validResponses.add("566"); // Command not found for device, recoverable
     }
-
-    public abstract IQ parseReplyContents(String statusCode, String errorString, String contents);
-
-    /*
-     * FIXME: This parser could be far cleaner than it is, given the possibility of the pseudo-json components
-     * containing colons, and the structure of them
-     */
-    static final Pattern kvRE = Pattern.compile("(.*?)=(.*)");
 
     protected static Map<String, Object> parseKeyValuePairs(String statusCode, String errorString, String contents) {
         Map<String, Object> params = new HashMap<>();
@@ -90,6 +88,8 @@ public abstract class OAReplyParser {
                 return value;
         }
     }
+
+    public abstract IQ parseReplyContents(String statusCode, String errorString, String contents);
 
     public boolean validResponseCode(String code) {
         return validResponses.contains(code);

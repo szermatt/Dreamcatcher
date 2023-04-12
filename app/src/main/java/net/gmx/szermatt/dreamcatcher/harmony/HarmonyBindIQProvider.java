@@ -14,14 +14,15 @@ import java.io.IOException;
 /*
  * Copied from BindIQProvider, but tweaked to support the Harmony's JID that does not have a localpart (user)
  */
-public class HarmonyBindIQProvider extends IQProvider<Bind> {
+class HarmonyBindIQProvider extends IQProvider<Bind> {
 
     @Override
     public Bind parse(XmlPullParser parser, int initialDepth)
             throws XmlPullParserException, IOException, SmackException {
         String name;
         Bind bind = null;
-        outerloop: while (true) {
+        outerloop:
+        while (true) {
             int eventType = parser.next();
             switch (eventType) {
                 case XmlPullParser.START_TAG:

@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-public abstract class OAStanza extends IQ {
+abstract class OAStanza extends IQ {
     private static final long CREATION_TIME = System.currentTimeMillis();
 
     private final String mimeType;
@@ -34,7 +34,8 @@ public abstract class OAStanza extends IQ {
     }
 
     @Override
-    @JsonIgnore // Subclasses use a Jackson object mapper that throws an exception for properties with multiple setters
+    @JsonIgnore
+    // Subclasses use a Jackson object mapper that throws an exception for properties with multiple setters
     public void setError(XMPPError error) {
         super.setError(error);
     }

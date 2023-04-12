@@ -1,8 +1,6 @@
 package net.gmx.szermatt.dreamcatcher.harmony;
 
-public class HarmonyProtocolException extends RuntimeException {
-    private static final long serialVersionUID = 1L;
-
+class HarmonyProtocolException extends RuntimeException {
     public HarmonyProtocolException(String message) {
         super(message);
     }

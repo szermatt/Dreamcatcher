@@ -12,6 +12,9 @@ import net.gmx.szermatt.dreamcatcher.harmony.PowerOffTask;
 
 import java.util.concurrent.Executor;
 
+/**
+ * A placeholder activity for the application; its main functionality is in the service.
+ * */
 public class TvActivity extends Activity {
     private static final String TAG = "DreamCatcher";
 
@@ -20,10 +23,10 @@ public class TvActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button button = (Button) findViewById(R.id.power_off);
-        DreamCatcherApplication app = DreamCatcherApplication.fromContext(this);
-        final Executor inBackground = app.getBackgroundExecutor();
-        final Handler onMain = app.getMainThreadHandler();
+        final Executor inBackground = DreamCatcherApplication.inBackground(this);
+        final Handler onMain = DreamCatcherApplication.onMain(this);
+
+        Button button = findViewById(R.id.power_off);
         button.setOnClickListener(v -> {
             Toast.makeText(this, "Power Off Requested", Toast.LENGTH_LONG).show();
             inBackground.execute(() -> {
@@ -44,8 +47,7 @@ public class TvActivity extends Activity {
     @Override
     protected void onStart() {
         super.onStart();
-        Intent intent = new Intent(this,DreamCatcherService.class);
-        startForegroundService(intent);
+        startForegroundService(new Intent(this, DreamCatcherService.class));
         Log.i(TAG, "started");
     }
 }

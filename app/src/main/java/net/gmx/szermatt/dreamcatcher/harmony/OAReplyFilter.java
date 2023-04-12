@@ -13,7 +13,7 @@ import org.jxmpp.jid.Jid;
 /*
  * Copied from IQReplyFilter, but tweaked to support the Harmony's response pattern
  */
-public class OAReplyFilter implements StanzaFilter {
+class OAReplyFilter implements StanzaFilter {
     private final StanzaFilter iqAndIdFilter;
     private final OrFilter fromFilter;
     private final Jid to;

@@ -12,7 +12,7 @@ import org.jivesoftware.smack.util.PacketParserUtils;
 import org.jivesoftware.smack.util.ParserUtils;
 import org.xmlpull.v1.XmlPullParser;
 
-public class HarmonyXMPPTCPConnection extends XMPPTCPConnection {
+class HarmonyXMPPTCPConnection extends XMPPTCPConnection {
 
     public HarmonyXMPPTCPConnection(XMPPTCPConnectionConfiguration config) {
         super(config);
@@ -34,7 +34,6 @@ public class HarmonyXMPPTCPConnection extends XMPPTCPConnection {
             CharSequence content = PacketParserUtils.parseContentDepth(parser, parserDepth);
             throw new Exception("Smack message parsing exception. Content: '" + content + "'", e);
         }
-        //ParserUtils.assertAtEndTag(parser);
         if (stanza != null) {
             processStanza(stanza);
         }

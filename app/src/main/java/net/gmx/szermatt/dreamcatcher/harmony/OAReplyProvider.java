@@ -9,8 +9,9 @@ import org.xmlpull.v1.XmlPullParser;
 import java.util.HashMap;
 import java.util.Map;
 
-public class OAReplyProvider extends IQProvider<IQ> {
-    private static Map<String, OAReplyParser> replyParsers = new HashMap<>();
+class OAReplyProvider extends IQProvider<IQ> {
+    private static final Map<String, OAReplyParser> replyParsers = new HashMap<>();
+
     static {
         replyParsers.put(MessageAuth.MIME_TYPE, new MessageAuth.AuthReplyParser());
         replyParsers.put(MessageStartActivity.MIME_TYPE, new MessageStartActivity.StartActivityReplyParser());
