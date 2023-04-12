@@ -34,7 +34,7 @@ public class HarmonyXMPPTCPConnection extends XMPPTCPConnection {
             CharSequence content = PacketParserUtils.parseContentDepth(parser, parserDepth);
             throw new Exception("Smack message parsing exception. Content: '" + content + "'", e);
         }
-        ParserUtils.assertAtEndTag(parser);
+        //ParserUtils.assertAtEndTag(parser);
         if (stanza != null) {
             processStanza(stanza);
         }
