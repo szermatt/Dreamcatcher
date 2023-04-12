@@ -24,45 +24,47 @@ public class DreamCatcherService extends Service {
 
     private static final String WORKER_TAG = "powerOff";
 
-    private BroadcastReceiver mReceiver;
+    private final BroadcastReceiver mDreamingStarted = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "Dreaming started");
+            WorkManager.getInstance(context).enqueue(
+                    new OneTimeWorkRequest.Builder(PowerOffWorker.class)
+                            .setConstraints(new Constraints.Builder()
+                                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                                    .build())
+                            .setInitialDelay(10, TimeUnit.MINUTES)
+                            .addTag(WORKER_TAG)
+                            .build());
+        }
+    };
+
+    private final BroadcastReceiver mDreamingStopped = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d(TAG, "Dreaming stopped");
+            WorkManager.getInstance(context).cancelAllWorkByTag(WORKER_TAG);
+        }
+    };
 
     @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
 
+    @Override
     public void onDestroy() {
-        Log.d(TAG, "destroyed");
+        Log.d(TAG, "Service destroyed");
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startForegroundWithNotification();
 
-        this.registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                Log.d(TAG, "Dreaming started");
-                WorkManager.getInstance(context).enqueue(
-                        new OneTimeWorkRequest.Builder(PowerOffWorker.class)
-                                .setConstraints(new Constraints.Builder()
-                                        .setRequiredNetworkType(NetworkType.CONNECTED)
-                                        .build())
-                                .setInitialDelay(10, TimeUnit.MINUTES)
-                                .addTag(WORKER_TAG)
-                                .build());
-            }
-        }, new IntentFilter(Intent.ACTION_DREAMING_STARTED));
+        registerReceiver(mDreamingStarted, new IntentFilter(Intent.ACTION_DREAMING_STARTED));
+        registerReceiver(mDreamingStopped, new IntentFilter(Intent.ACTION_DREAMING_STOPPED));
 
-        registerReceiver(new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                Log.d(TAG, "Dreaming stopped");
-                WorkManager.getInstance(context).cancelAllWorkByTag(WORKER_TAG);
-            }
-        }, new IntentFilter(Intent.ACTION_DREAMING_STOPPED));
-
-        Log.d(TAG, "started");
+        Log.d(TAG, "Service started with intent " + intent.getAction());
         return START_STICKY;
     }
 
