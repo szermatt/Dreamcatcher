@@ -9,63 +9,79 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.IBinder;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
+import androidx.work.Constraints;
+import androidx.work.NetworkType;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
+
+import java.util.concurrent.TimeUnit;
 
 public class DreamCatcherService extends Service {
     private static final String TAG = "DreamCatcher";
     private static final String CHANNEL_ID = "DreamCatcher";
+
+    private static final String WORKER_TAG = "powerOff";
+
     private BroadcastReceiver mReceiver;
 
     @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
+
     public void onDestroy() {
-        Toast.makeText(this, "Dream catcher stopped", Toast.LENGTH_LONG).show();
-        Log.d(TAG, "onDestroy");
+        Log.d(TAG, "destroyed");
     }
 
     @Override
-    public void onStart(Intent intent, int startId)
-    {
-        Toast.makeText(this, "Dream catcher started", Toast.LENGTH_LONG).show();
-        Log.d(TAG, "onStart");
-        createNotificationChannel();
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        startForegroundWithNotification();
+
+        this.registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.d(TAG, "Dreaming started");
+                WorkManager.getInstance(context).enqueue(
+                        new OneTimeWorkRequest.Builder(PowerOffWorker.class)
+                                .setConstraints(new Constraints.Builder()
+                                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                                        .build())
+                                .setInitialDelay(10, TimeUnit.MINUTES)
+                                .addTag(WORKER_TAG)
+                                .build());
+            }
+        }, new IntentFilter(Intent.ACTION_DREAMING_STARTED));
+
+        registerReceiver(new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                Log.d(TAG, "Dreaming stopped");
+                WorkManager.getInstance(context).cancelAllWorkByTag(WORKER_TAG);
+            }
+        }, new IntentFilter(Intent.ACTION_DREAMING_STOPPED));
+
+        Log.d(TAG, "started");
+        return START_STICKY;
+    }
+
+    /**
+     * Setup a notification channel and notification, to satisfy the requirement
+     * that foreground services call startForeground() within 5s of being started.
+     */
+    private void startForegroundWithNotification() {
+        NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID, "DreamCatcher Channel", NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription("DreamCatcher Notifications");
+        getSystemService(NotificationManager.class).createNotificationChannel(channel);
+
         startForeground(1, new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(androidx.leanback.R.drawable.lb_ic_pause)
                 .setContentTitle("Dream Catcher")
                 .setContentText("running...")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .build());
-        Log.d(TAG, "notified");
-
-        this.mReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                Log.d(TAG, "Got Dreaming Intent: " + intent.getAction());
-            }
-        };
-
-        IntentFilter filter = new IntentFilter(Intent.ACTION_DREAMING_STARTED);
-        filter.addAction(Intent.ACTION_DREAMING_STOPPED);
-        this.registerReceiver(this.mReceiver, filter);
-
-        Log.d(TAG, "registered");
     }
 
-    private void createNotificationChannel() {
-        // Create the NotificationChannel, but only on API 26+ because
-        // the NotificationChannel class is new and not in the support library
-            CharSequence name = "DreamCatcher Channel";
-            String description = "DreamCatcher Notifications";
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
-            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
-            channel.setDescription(description);
-            // Register the channel with the system; you can't change the importance
-            // or other notification behaviors after this
-            NotificationManager notificationManager = getSystemService(NotificationManager.class);
-            notificationManager.createNotificationChannel(channel);
-    }
 }
