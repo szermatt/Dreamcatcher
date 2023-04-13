@@ -21,8 +21,10 @@ import java.util.concurrent.TimeUnit;
 public class DreamCatcherService extends Service {
     private static final String TAG = "DreamCatcher";
     private static final String CHANNEL_ID = "DreamCatcher";
-
     private static final String WORKER_TAG = "powerOff";
+
+    /** True once broadcast receivers have been registered. */
+    private boolean registered;
 
     private final BroadcastReceiver mDreamingStarted = new BroadcastReceiver() {
         @Override
@@ -54,17 +56,32 @@ public class DreamCatcherService extends Service {
 
     @Override
     public void onDestroy() {
+        if (registered) {
+            unregisterReceiver(mDreamingStarted);
+            unregisterReceiver(mDreamingStopped);
+            registered = false;
+        }
         Log.d(TAG, "Service destroyed");
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startForegroundWithNotification();
+        if (!registered) {
+            startForegroundWithNotification();
 
-        registerReceiver(mDreamingStarted, new IntentFilter(Intent.ACTION_DREAMING_STARTED));
-        registerReceiver(mDreamingStopped, new IntentFilter(Intent.ACTION_DREAMING_STOPPED));
+            // Cancel workers that might be left over from a previous
+            // instance. If, for example, the device crashes after
+            // starting the worker but before it's run, the system
+            // might start the worker once it's up - but not in
+            // daydream state anymore.
+            WorkManager.getInstance(this).cancelAllWorkByTag(WORKER_TAG);
 
-        Log.d(TAG, "Service started with intent " + intent.getAction());
+            registerReceiver(mDreamingStarted, new IntentFilter(Intent.ACTION_DREAMING_STARTED));
+            registerReceiver(mDreamingStopped, new IntentFilter(Intent.ACTION_DREAMING_STOPPED));
+            registered = true;
+
+            Log.d(TAG, "Service started with intent " + intent.getAction());
+        }
         return START_STICKY;
     }
 
