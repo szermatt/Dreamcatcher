@@ -46,7 +46,7 @@ public class PowerOffTask {
     private final ReentrantLock messageLock = new ReentrantLock();
 
     @GuardedBy("this")
-    private boolean stopped = true;
+    private boolean stopped;
 
     /** Initialize smack. This must be called at least once. */
     private static synchronized void init() {
@@ -82,12 +82,21 @@ public class PowerOffTask {
                 .addEnabledSaslMechanism(SASLMechanism.PLAIN)
                 .build();
         MessageAuth.AuthReply authReply = authenticate(config);
-        if (isStopped() || authReply == null) return;
+        if (authReply == null) {
+          Log.i(TAG, "stopped at auth... giving up");
+          return; 
+        }
 
-        powerOff(config, authReply.getUsername(), authReply.getPassword());
+        if (!powerOff(config, authReply.getUsername(), authReply.getPassword())) {
+          Log.i(TAG, "stopped at powerOff... giving up");
+        }
     }
 
-    /** Gets the session auth credentials. */
+    /**
+     * Gets the session auth credentials.
+     *
+     * @return null if stopped, the credentials otherwise
+     */
     @Nullable
     private MessageAuth.AuthReply authenticate(XMPPTCPConnectionConfiguration config)
             throws SmackException, IOException, XMPPException, InterruptedException {
@@ -121,20 +130,22 @@ public class PowerOffTask {
 
     /**
      * Connect with the given credentials and send the power off command.
+     *
+     * @return false if stopped
      */
-    private void powerOff(XMPPTCPConnectionConfiguration config, String userName, String password)
+    private boolean powerOff(XMPPTCPConnectionConfiguration config, String userName, String password)
             throws SmackException, IOException, XMPPException, InterruptedException {
         Log.i(TAG, "reconnect...");
         HarmonyXMPPTCPConnection connection = new HarmonyXMPPTCPConnection(config);
         try {
             connection.connect();
             Log.i(TAG, "reconnected.");
-            if (isStopped()) return;
+            if (isStopped()) return false;
 
             Log.i(TAG, "re-auth...");
             connection.login(userName, password, Resourcepart.from("main"));
             Log.i(TAG, "re-auth ok.");
-            if (isStopped()) return;
+            if (isStopped()) return false;
 
             connection.setFromMode(XMPPConnection.FromMode.USER);
             Log.i(TAG, "power off...");
@@ -144,6 +155,7 @@ public class PowerOffTask {
                     MessageStartActivity.StartActivityReply.class,
                     START_ACTIVITY_REPLY_TIMEOUT);
             Log.i(TAG, "power off...done");
+            return true;
         } finally {
             if (connection.isConnected()) {
                 Log.i(TAG, "disconnect...");
