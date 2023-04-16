@@ -35,38 +35,38 @@ public class PowerOffTask {
      * True once smack has been initialized in the current VM.
      */
     @GuardedBy("PowerOffTask.class")
-    private static boolean initialized;
+    private static boolean mInitialized;
 
     /**
      * To prevent timeouts when different threads send a message and expect a response, create a lock that only allows a
      * single thread at a time to perform a send/receive action.
      */
-    private final ReentrantLock messageLock = new ReentrantLock();
+    private final ReentrantLock mMessageLock = new ReentrantLock();
 
     @GuardedBy("this")
-    private boolean stopped;
+    private boolean mStopped;
 
     /** Initialize smack. This must be called at least once. */
     private static synchronized void init() {
-        if (initialized) {
+        if (mInitialized) {
             return;
         }
         new AndroidSmackInitializer().initialize();
         ProviderManager.addIQProvider(Bind.ELEMENT, Bind.NAMESPACE, new HarmonyBindIQProvider());
         ProviderManager.addIQProvider("oa", "connect.logitech.com", new OAReplyProvider());
-        initialized = true;
+        mInitialized = true;
     }
 
     /** Stops communicating with the server at the next convenient point. */
     public synchronized void stop() {
-        if (!stopped) {
-            stopped = true;
+        if (!mStopped) {
+            mStopped = true;
         }
     }
 
     /** Returns true if stop() was called. */
     public synchronized boolean isStopped() {
-        return stopped;
+        return mStopped;
     }
 
     /**
@@ -142,14 +142,14 @@ public class PowerOffTask {
     private <R extends OAStanza> R sendOAStanza(XMPPTCPConnection connection, OAStanza stanza, Class<R> replyClass,
                                                 long replyTimeout) {
         StanzaCollector collector = connection.createStanzaCollector(new OAReplyFilter(stanza, connection));
-        messageLock.lock();
+        mMessageLock.lock();
         try {
             connection.sendStanza(stanza);
             return replyClass.cast(getNextStanzaSkipContinues(collector, replyTimeout, connection));
         } catch (InterruptedException | SmackException | XMPPErrorException e) {
             throw new RuntimeException("Failed communicating with Harmony Hub", e);
         } finally {
-            messageLock.unlock();
+            mMessageLock.unlock();
             collector.cancel();
         }
     }
