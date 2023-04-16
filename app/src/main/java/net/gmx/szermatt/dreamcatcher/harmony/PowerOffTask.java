@@ -2,6 +2,7 @@ package net.gmx.szermatt.dreamcatcher.harmony;
 
 import androidx.annotation.GuardedBy;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.NoResponseException;
@@ -83,6 +84,9 @@ public class PowerOffTask {
                 .addEnabledSaslMechanism(SASLMechanism.PLAIN)
                 .build();
         MessageAuth.AuthReply authReply = authenticate(config);
+        if (authReply == null) {
+            throw new HarmonyProtocolException("Session authentication failed");
+        }
         powerOff(config, authReply.getUsername(), authReply.getPassword());
     }
 
@@ -91,7 +95,7 @@ public class PowerOffTask {
      *
      * @return null if stopped, the credentials otherwise
      */
-    @NonNull
+    @Nullable
     private MessageAuth.AuthReply authenticate(XMPPTCPConnectionConfiguration config)
             throws SmackException, IOException, XMPPException, InterruptedException,
             CancellationException {
@@ -138,7 +142,7 @@ public class PowerOffTask {
         }
     }
 
-    @NonNull
+    @Nullable
     private <R extends OAStanza> R sendOAStanza(XMPPTCPConnection connection, OAStanza stanza, Class<R> replyClass,
                                                 long replyTimeout) {
         StanzaCollector collector = connection.createStanzaCollector(new OAReplyFilter(stanza, connection));
