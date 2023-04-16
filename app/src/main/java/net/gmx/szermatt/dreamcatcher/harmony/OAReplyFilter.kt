@@ -5,7 +5,7 @@ import org.jivesoftware.smack.filter.*
 import org.jivesoftware.smack.packet.Stanza
 import org.jxmpp.jid.Jid
 
-/*
+/**
  * Copied from IQReplyFilter, but tweaked to support the Harmony's response pattern
  */
 internal class OAReplyFilter(request: OAStanza, connection: XMPPConnection) : StanzaFilter {
