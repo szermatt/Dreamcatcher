@@ -19,11 +19,7 @@ internal abstract class OAReplyParser {
     }
 
     companion object {
-        /*
-     * FIXME: This parser could be far cleaner than it is, given the possibility of the pseudo-json components
-     * containing colons, and the structure of them
-     */
-        val kvRE = Pattern.compile("(.*?)=(.*)")
+        private val kvRE : Pattern = Pattern.compile("(.*?)=(.*)")
         var validResponses: MutableSet<String?> = HashSet()
 
         init {
@@ -33,6 +29,7 @@ internal abstract class OAReplyParser {
             validResponses.add("566") // Command not found for device, recoverable
         }
 
+        @JvmStatic
         protected fun parseKeyValuePairs(
             statusCode: String?,
             errorString: String?,
@@ -54,20 +51,20 @@ internal abstract class OAReplyParser {
                 }
                 var valueObj: Any
                 val value = matcher.group(2)
-                valueObj = if (value.startsWith("{")) {
+                valueObj = if (value?.startsWith("{") == true) {
                     parsePseudoJson(value)
                 } else {
                     value
                 }
-                params[matcher.group(1)] = valueObj
+                params[matcher.group(1)!!] = valueObj
             }
             return params
         }
 
-        protected fun parsePseudoJson(value: String): Map<String, Any> {
-            var value = value
+        @JvmStatic
+        protected fun parsePseudoJson(v: String): Map<String, Any> {
             val params: MutableMap<String, Any> = HashMap()
-            value = value.substring(1, value.length - 1)
+            val value = v.substring(1, v.length - 1)
             for (pair in value.split(", ?".toRegex()).dropLastWhile { it.isEmpty() }
                 .toTypedArray()) {
                 val matcher = kvRE.matcher(pair)
@@ -79,7 +76,7 @@ internal abstract class OAReplyParser {
                         )
                     )
                 }
-                params[matcher.group(1)] = parsePseudoJsonValue(matcher.group(2))
+                params[matcher.group(1)!!] = parsePseudoJsonValue(matcher.group(2)!!)
             }
             return params
         }

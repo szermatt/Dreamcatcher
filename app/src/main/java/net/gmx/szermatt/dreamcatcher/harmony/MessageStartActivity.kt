@@ -8,31 +8,22 @@ internal object MessageStartActivity {
     const val MIME_TYPE = "vnd.logitech.harmony/vnd.logitech.harmony.engine?startactivity"
     const val MIME_TYPE2 = "harmony.engine?startActivity"
 
-    /*
-     * Request
-     */
-    class StartActivityRequest(private val activityId: Int) : IrCommand(MIME_TYPE) {
-        //
-        protected override val childElementPairs: Map<String, Any?>
-            protected get() = ImmutableMap.builder<String, Any?>() //
+    /** Request */
+    class StartActivityRequest(private val activityId: Int) : OaStanza(MIME_TYPE) {
+        override val childElementPairs: Map<String, Any?>
+            get() = ImmutableMap.builder<String, Any?>()
                 .put("activityId", activityId)
                 .put("timestamp", generateTimestamp())
                 .build()
     }
 
-    /*
-     * Reply (unused)
-     */
+    /** Reply (unused) */
     class StartActivityReply : OAStanza(MIME_TYPE) {
-        //
-        protected override val childElementPairs: Map<String, Any?>
-            protected get() = ImmutableMap.builder<String, Any?>() //
-                .build()
+        override val childElementPairs: Map<String, Any?>
+            get() = ImmutableMap.builder<String, Any?>().build()
     }
 
-    /*
-     * Parser
-     */
+    /** Parser */
     class StartActivityReplyParser : OAReplyParser() {
         override fun parseReplyContents(
             statusCode: String?,
@@ -40,7 +31,7 @@ internal object MessageStartActivity {
             contents: String
         ): IQ {
             return Jackson.OBJECT_MAPPER.convertValue<StartActivityReply>(
-                OAReplyParser.Companion.parseKeyValuePairs(statusCode, errorString, contents),
+                parseKeyValuePairs(statusCode, errorString, contents),
                 StartActivityReply::class.java
             )
         }
@@ -48,22 +39,6 @@ internal object MessageStartActivity {
         override fun validResponseCode(code: String?): Boolean {
             //sometimes the start activity will return a 401 if a device is not setup correctly
             return super.validResponseCode(code) || code == "401"
-        }
-    }
-}
-
-private abstract class IrCommand(mimeType: String?) : OAStanza(mimeType) {
-    fun generateAction(deviceId: Int, button: String): String {
-        return try {
-            Jackson.OBJECT_MAPPER.writeValueAsString(
-                ImmutableMap.builder<String, Any>() //
-                    .put("type", "IRCommand")
-                    .put("deviceId", Integer.valueOf(deviceId).toString())
-                    .put("command", button)
-                    .build()
-            ).replace(":".toRegex(), "::")
-        } catch (e: JsonProcessingException) {
-            throw RuntimeException(e)
         }
     }
 }

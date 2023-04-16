@@ -9,17 +9,14 @@ import java.util.*
 internal object MessageAuth {
     var MIME_TYPE = "vnd.logitech.connect/vnd.logitech.pair"
 
-    /*
-     * Request
-     */
+    /** Request */
     class AuthRequest : OAStanza(MIME_TYPE) {
         init {
             type = Type.get
         }
 
-        //
-        protected override val childElementPairs: Map<String, Any?>
-            protected get() = ImmutableMap.builder<String, Any?>() //
+        override val childElementPairs: Map<String, Any?>
+            get() = ImmutableMap.builder<String, Any?>() //
                 .put("method", "pair")
                 .put("name", generateUniqueId() + "#" + deviceIdentifier)
                 .build()
@@ -29,12 +26,10 @@ internal object MessageAuth {
         }
 
         private val deviceIdentifier: String
-            private get() = "iOS6.0.1#iPhone"
+            get() = "iOS6.0.1#iPhone"
     }
 
-    /*
-     * Reply
-     */
+    /** Reply */
     class AuthReply @JsonCreator constructor() : OAStanza(MIME_TYPE) {
         val serverIdentity: String? = null
         val hubId: String? = null
@@ -45,9 +40,8 @@ internal object MessageAuth {
         val productId: String? = null
         val friendlyName: String? = null
 
-        //
-        protected override val childElementPairs: Map<String, Any?>
-            protected get() = ImmutableMap.builder<String, Any?>() //
+        override val childElementPairs: Map<String, Any?>
+            get() = ImmutableMap.builder<String, Any?>()
                 .put("serverIdentity", serverIdentity)
                 .put("hubId", hubId)
                 .put("identity", password)
@@ -61,17 +55,15 @@ internal object MessageAuth {
             get() = String.format("%s@connect.logitech.com/gatorade", password)
     }
 
-    /*
-     * Parser
-     */
+    /** Parser */
     class AuthReplyParser : OAReplyParser() {
         override fun parseReplyContents(
             statusCode: String?,
             errorString: String?,
             contents: String
         ): IQ {
-            return Jackson.OBJECT_MAPPER.convertValue<AuthReply>(
-                OAReplyParser.Companion.parseKeyValuePairs(
+            return Jackson.OBJECT_MAPPER.convertValue(
+                parseKeyValuePairs(
                     statusCode,
                     errorString,
                     contents

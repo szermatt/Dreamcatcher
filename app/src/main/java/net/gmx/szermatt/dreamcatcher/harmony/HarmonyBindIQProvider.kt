@@ -18,8 +18,7 @@ internal class HarmonyBindIQProvider : IQProvider<Bind?>() {
         var name: String?
         var bind: Bind? = null
         outerloop@ while (true) {
-            val eventType = parser.next()
-            when (eventType) {
+            when (parser.next()) {
                 XmlPullParser.START_TAG -> {
                     name = parser.name
                     when (name) {

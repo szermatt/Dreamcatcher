@@ -17,8 +17,7 @@ internal class HarmonyXMPPTCPConnection(config: XMPPTCPConnectionConfiguration?)
     override fun parseAndProcessStanza(parser: XmlPullParser) {
         ParserUtils.assertAtStartTag(parser)
         val parserDepth = parser.depth
-        var stanza: Stanza? = null
-        stanza = try {
+        val stanza = try {
             if (IQ.IQ_ELEMENT == parser.name && parser.getAttributeValue("", "type") == null) {
                 // Acknowledgement IQs don't contain a type so an empty result is created here to prevent a parsing NPE
                 EmptyResultIQ()
