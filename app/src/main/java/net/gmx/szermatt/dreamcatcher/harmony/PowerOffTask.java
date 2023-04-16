@@ -95,7 +95,7 @@ public class PowerOffTask {
     private MessageAuth.AuthReply authenticate(XMPPTCPConnectionConfiguration config)
             throws SmackException, IOException, XMPPException, InterruptedException,
             CancellationException {
-        XMPPTCPConnection connection = newConnection(config);
+        XMPPTCPConnection connection = new HarmonyXMPPTCPConnection(config);
         try {
             cancelIfStopped();
             connection.connect();
@@ -118,7 +118,7 @@ public class PowerOffTask {
      */
     private void powerOff(XMPPTCPConnectionConfiguration config, String userName, String password)
             throws SmackException, IOException, XMPPException, InterruptedException, CancellationException {
-        XMPPTCPConnection connection = newConnection(config);
+        XMPPTCPConnection connection = new HarmonyXMPPTCPConnection(config);
         try {
             cancelIfStopped();
             connection.connect();
@@ -174,11 +174,5 @@ public class PowerOffTask {
         if (isStopped()) {
             throw new CancellationException("stopped");
         }
-    }
-
-    /** Creates a new connection given the configuration. */
-    @NonNull
-    abstract XMPPTCPConnection newConnection(XMPPTCPConnectionConfiguration config) {
-        return new HarmonyXMPPTCPConnection(config);
     }
 }
