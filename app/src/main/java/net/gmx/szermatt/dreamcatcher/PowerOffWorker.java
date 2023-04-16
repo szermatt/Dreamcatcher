@@ -9,6 +9,8 @@ import androidx.work.WorkerParameters;
 
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffTask;
 
+import java.util.concurrent.CancellationException;
+
 /** Wraps a {@link PowerOffTask} into a Worker. */
 public class PowerOffWorker extends Worker {
     private static final String TAG = "DreamCatcher";
@@ -27,6 +29,9 @@ public class PowerOffWorker extends Worker {
             Log.i(TAG, "PowerOffWorker launched");
             task.run();
             Log.i(TAG, "PowerOffWorker succeeded");
+            return Result.success();
+        } catch (CancellationException e) {
+            Log.d(TAG, "PowerOffWorker stopped", e);
             return Result.success();
         } catch (Exception e) {
             Log.e(TAG, "PowerOffWorker failed", e);

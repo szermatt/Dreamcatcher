@@ -1,9 +1,7 @@
 package net.gmx.szermatt.dreamcatcher.harmony;
 
-import android.util.Log;
-
 import androidx.annotation.GuardedBy;
-import androidx.annotation.Nullable;
+import androidx.annotation.NonNull;
 
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.NoResponseException;
@@ -22,11 +20,11 @@ import org.jxmpp.jid.parts.Resourcepart;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.locks.ReentrantLock;
 
 /** Sends a power off command to the Harmony hub. */
 public class PowerOffTask {
-    private static final String TAG = "Harmony";
     public static final int DEFAULT_REPLY_TIMEOUT = 5000;
     public static final int START_ACTIVITY_REPLY_TIMEOUT = 30_000;
     private static final int DEFAULT_PORT = 5222;
@@ -62,7 +60,6 @@ public class PowerOffTask {
     /** Stops communicating with the server at the next convenient point. */
     public synchronized void stop() {
         if (!stopped) {
-            Log.i(TAG, "stopped");
             stopped = true;
         }
     }
@@ -72,7 +69,11 @@ public class PowerOffTask {
         return stopped;
     }
 
-    /** Connects to the Harmony Hub and send the power off command. */
+    /**
+     * Connects to the Harmony Hub and send the power off command.
+     *
+     * @throws CancellationException if the task was stopped before it could be completed
+     */
     public void run() throws Exception {
         init();
         XMPPTCPConnectionConfiguration config = XMPPTCPConnectionConfiguration.builder()
@@ -82,14 +83,7 @@ public class PowerOffTask {
                 .addEnabledSaslMechanism(SASLMechanism.PLAIN)
                 .build();
         MessageAuth.AuthReply authReply = authenticate(config);
-        if (authReply == null) {
-          Log.i(TAG, "stopped at auth... giving up");
-          return; 
-        }
-
-        if (!powerOff(config, authReply.getUsername(), authReply.getPassword())) {
-          Log.i(TAG, "stopped at powerOff... giving up");
-        }
+        powerOff(config, authReply.getUsername(), authReply.getPassword());
     }
 
     /**
@@ -97,74 +91,54 @@ public class PowerOffTask {
      *
      * @return null if stopped, the credentials otherwise
      */
-    @Nullable
+    @NonNull
     private MessageAuth.AuthReply authenticate(XMPPTCPConnectionConfiguration config)
-            throws SmackException, IOException, XMPPException, InterruptedException {
-        HarmonyXMPPTCPConnection connection = new HarmonyXMPPTCPConnection(config);
+            throws SmackException, IOException, XMPPException, InterruptedException,
+            CancellationException {
+        XMPPTCPConnection connection = newConnection(config);
         try {
-            Log.i(TAG, "connect...");
+            cancelIfStopped();
             connection.connect();
-            Log.i(TAG, "connected.");
-            if (isStopped()) return null;
-
-            Log.i(TAG, "login...");
+            cancelIfStopped();
             connection.login(DEFAULT_XMPP_USER, DEFAULT_XMPP_PASSWORD, Resourcepart.from("auth"));
-            Log.i(TAG, "logged in.");
-            if (isStopped()) return null;
+            cancelIfStopped();
 
             connection.setFromMode(XMPPConnection.FromMode.USER);
-
-            Log.i(TAG, "auth...");
-            MessageAuth.AuthReply oaResponse = sendOAStanza(
+            return sendOAStanza(
                     connection, new MessageAuth.AuthRequest(), MessageAuth.AuthReply.class, DEFAULT_REPLY_TIMEOUT);
-            Log.i(TAG, "auth ok.");
-            return oaResponse;
         } finally {
             if (connection.isConnected()) {
-                Log.i(TAG, "disconnect...");
                 connection.disconnect();
-                Log.i(TAG, "disconnected.");
             }
         }
     }
 
     /**
      * Connect with the given credentials and send the power off command.
-     *
-     * @return false if stopped
      */
-    private boolean powerOff(XMPPTCPConnectionConfiguration config, String userName, String password)
-            throws SmackException, IOException, XMPPException, InterruptedException {
-        Log.i(TAG, "reconnect...");
-        HarmonyXMPPTCPConnection connection = new HarmonyXMPPTCPConnection(config);
+    private void powerOff(XMPPTCPConnectionConfiguration config, String userName, String password)
+            throws SmackException, IOException, XMPPException, InterruptedException, CancellationException {
+        XMPPTCPConnection connection = newConnection(config);
         try {
+            cancelIfStopped();
             connection.connect();
-            Log.i(TAG, "reconnected.");
-            if (isStopped()) return false;
-
-            Log.i(TAG, "re-auth...");
+            cancelIfStopped();
             connection.login(userName, password, Resourcepart.from("main"));
-            Log.i(TAG, "re-auth ok.");
-            if (isStopped()) return false;
-
+            cancelIfStopped();
             connection.setFromMode(XMPPConnection.FromMode.USER);
-            Log.i(TAG, "power off...");
             sendOAStanza(
                     connection,
                     new MessageStartActivity.StartActivityRequest(-1),
                     MessageStartActivity.StartActivityReply.class,
                     START_ACTIVITY_REPLY_TIMEOUT);
-            Log.i(TAG, "power off...done");
-            return true;
         } finally {
             if (connection.isConnected()) {
-                Log.i(TAG, "disconnect...");
                 connection.disconnect();
-                Log.i(TAG, "disconnected.");
             }
         }
     }
 
+    @NonNull
     private <R extends OAStanza> R sendOAStanza(XMPPTCPConnection connection, OAStanza stanza, Class<R> replyClass,
                                                 long replyTimeout) {
         StanzaCollector collector = connection.createStanzaCollector(new OAReplyFilter(stanza, connection));
@@ -180,7 +154,7 @@ public class PowerOffTask {
         }
     }
 
-
+    @NonNull
     private Stanza getNextStanzaSkipContinues(
             StanzaCollector collector, long replyTimeout, XMPPTCPConnection connection)
             throws InterruptedException, NoResponseException, XMPPErrorException {
@@ -196,4 +170,15 @@ public class PowerOffTask {
         }
     }
 
+    private void cancelIfStopped() throws CancellationException {
+        if (isStopped()) {
+            throw new CancellationException("stopped");
+        }
+    }
+
+    /** Creates a new connection given the configuration. */
+    @NonNull
+    abstract XMPPTCPConnection newConnection(XMPPTCPConnectionConfiguration config) {
+        return new HarmonyXMPPTCPConnection(config);
+    }
 }
