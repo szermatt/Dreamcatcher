@@ -1,97 +1,108 @@
-package net.gmx.szermatt.dreamcatcher.harmony;
+package net.gmx.szermatt.dreamcatcher.harmony
 
-import static java.lang.String.format;
+import org.jivesoftware.smack.packet.IQ
+import java.util.regex.Pattern
 
-import org.jivesoftware.smack.packet.IQ;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+/** Exception thrown when Logitech authentication fails.  */
+internal class AuthFailedException @JvmOverloads constructor(
+    message: String?,
+    cause: Throwable? = null
+) : RuntimeException(
+    String.format("%s: %s", "Logitech authentication failed", message), cause
+)
 
-abstract class OAReplyParser {
-    /*
+internal abstract class OAReplyParser {
+    abstract fun parseReplyContents(statusCode: String?, errorString: String?, contents: String): IQ
+    open fun validResponseCode(code: String?): Boolean {
+        return validResponses.contains(code)
+    }
+
+    companion object {
+        /*
      * FIXME: This parser could be far cleaner than it is, given the possibility of the pseudo-json components
      * containing colons, and the structure of them
      */
-    static final Pattern kvRE = Pattern.compile("(.*?)=(.*)");
-    static Set<String> validResponses = new HashSet<>();
+        val kvRE = Pattern.compile("(.*?)=(.*)")
+        var validResponses: MutableSet<String?> = HashSet()
 
-    static {
-        validResponses.add("100");
-        validResponses.add("200");
-        validResponses.add("506"); // Bluetooth not connected
-        validResponses.add("566"); // Command not found for device, recoverable
-    }
+        init {
+            validResponses.add("100")
+            validResponses.add("200")
+            validResponses.add("506") // Bluetooth not connected
+            validResponses.add("566") // Command not found for device, recoverable
+        }
 
-    protected static Map<String, Object> parseKeyValuePairs(String statusCode, String errorString, String contents) {
-        Map<String, Object> params = new HashMap<>();
-        if (statusCode != null) {
-            params.put("statusCode", statusCode);
-        }
-        if (errorString != null) {
-            params.put("errorString", errorString);
-        }
-        for (String pair : contents.split(":")) {
-            Matcher matcher = kvRE.matcher(pair);
-            if (!matcher.matches()) {
-                continue;
-                // throw new AuthFailedException(format("failed to parse element in auth response: %s", pair));
+        protected fun parseKeyValuePairs(
+            statusCode: String?,
+            errorString: String?,
+            contents: String
+        ): Map<String, Any> {
+            val params: MutableMap<String, Any> = HashMap()
+            if (statusCode != null) {
+                params["statusCode"] = statusCode
             }
-            Object valueObj;
-            String value = matcher.group(2);
-            if (value.startsWith("{")) {
-                valueObj = parsePseudoJson(value);
-            } else {
-                valueObj = value;
+            if (errorString != null) {
+                params["errorString"] = errorString
             }
-            params.put(matcher.group(1), valueObj);
-        }
-
-        return params;
-    }
-
-    protected static Map<String, Object> parsePseudoJson(String value) {
-        Map<String, Object> params = new HashMap<>();
-        value = value.substring(1, value.length() - 1);
-        for (String pair : value.split(", ?")) {
-            Matcher matcher = kvRE.matcher(pair);
-            if (!matcher.matches()) {
-                throw new AuthFailedException(format("failed to parse element in auth response: %s", value));
-            }
-            params.put(matcher.group(1), parsePseudoJsonValue(matcher.group(2)));
-        }
-        return params;
-    }
-
-    private static Object parsePseudoJsonValue(String value) {
-        switch (value.charAt(0)) {
-            case '{':
-                return parsePseudoJsonValue(value);
-            case '"':
-                return value.substring(1, value.length() - 1);
-            case '\'':
-                return value.substring(1, value.length() - 1);
-            default:
-                try {
-                    return Long.parseLong(value);
-                } catch (NumberFormatException e) {
-                    // do nothing
+            for (pair in contents.split(":".toRegex()).dropLastWhile { it.isEmpty() }
+                .toTypedArray()) {
+                val matcher = kvRE.matcher(pair)
+                if (!matcher.matches()) {
+                    continue
+                    // throw new AuthFailedException(format("failed to parse element in auth response: %s", pair));
                 }
-                try {
-                    return Double.parseDouble(value);
-                } catch (NumberFormatException e) {
-                    // do nothing
+                var valueObj: Any
+                val value = matcher.group(2)
+                valueObj = if (value.startsWith("{")) {
+                    parsePseudoJson(value)
+                } else {
+                    value
                 }
-                return value;
+                params[matcher.group(1)] = valueObj
+            }
+            return params
         }
-    }
 
-    public abstract IQ parseReplyContents(String statusCode, String errorString, String contents);
+        protected fun parsePseudoJson(value: String): Map<String, Any> {
+            var value = value
+            val params: MutableMap<String, Any> = HashMap()
+            value = value.substring(1, value.length - 1)
+            for (pair in value.split(", ?".toRegex()).dropLastWhile { it.isEmpty() }
+                .toTypedArray()) {
+                val matcher = kvRE.matcher(pair)
+                if (!matcher.matches()) {
+                    throw AuthFailedException(
+                        String.format(
+                            "failed to parse element in auth response: %s",
+                            value
+                        )
+                    )
+                }
+                params[matcher.group(1)] = parsePseudoJsonValue(matcher.group(2))
+            }
+            return params
+        }
 
-    public boolean validResponseCode(String code) {
-        return validResponses.contains(code);
+        private fun parsePseudoJsonValue(value: String): Any {
+            return when (value[0]) {
+                '{' -> parsePseudoJsonValue(value)
+                '"' -> value.substring(1, value.length - 1)
+                '\'' -> value.substring(1, value.length - 1)
+                else -> {
+                    try {
+                        return value.toLong()
+                    } catch (e: NumberFormatException) {
+                        // do nothing
+                    }
+                    try {
+                        return value.toDouble()
+                    } catch (e: NumberFormatException) {
+                        // do nothing
+                    }
+                    value
+                }
+            }
+        }
     }
 }

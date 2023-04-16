@@ -1,87 +1,51 @@
-package net.gmx.szermatt.dreamcatcher.harmony;
+package net.gmx.szermatt.dreamcatcher.harmony
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.google.common.base.Joiner;
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.google.common.base.Joiner
+import org.jivesoftware.smack.packet.IQ
+import org.jivesoftware.smack.packet.SimpleIQ
+import org.jivesoftware.smack.packet.XMPPError
 
-import org.jivesoftware.smack.packet.IQ;
-import org.jivesoftware.smack.packet.SimpleIQ;
-import org.jivesoftware.smack.packet.XMPPError;
+internal abstract class OAStanza(protected val mimeType: String?) :
+    IQ(object : SimpleIQ("oa", "connect.logitech.com") {}) {
+    var statusCode: String? = null
+    var errorString: String? = null
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-
-abstract class OAStanza extends IQ {
-    private static final long CREATION_TIME = System.currentTimeMillis();
-
-    private final String mimeType;
-    private String statusCode;
-    private String errorString;
-
-    public OAStanza(String mimeType) {
-        super(new SimpleIQ("oa", "connect.logitech.com") {
-        });
-        this.mimeType = mimeType;
+    @JsonIgnore // Subclasses use a Jackson object mapper that throws an exception for properties with multiple setters
+    override fun setError(error: XMPPError) {
+        super.setError(error)
     }
 
-    public String getStatusCode() {
-        return statusCode;
-    }
-
-    public void setStatusCode(String statusCode) {
-        this.statusCode = statusCode;
-    }
-
-    @Override
-    @JsonIgnore
-    // Subclasses use a Jackson object mapper that throws an exception for properties with multiple setters
-    public void setError(XMPPError error) {
-        super.setError(error);
-    }
-
-    public String getErrorString() {
-        return errorString;
-    }
-
-    public void setErrorString(String errorString) {
-        this.errorString = errorString;
-    }
-
-    @Override
-    protected IQChildElementXmlStringBuilder getIQChildElementBuilder(IQChildElementXmlStringBuilder xml) {
+    override fun getIQChildElementBuilder(xml: IQChildElementXmlStringBuilder): IQChildElementXmlStringBuilder {
         if (statusCode != null) {
-            xml.attribute("errorcode", statusCode);
+            xml.attribute("errorcode", statusCode)
         }
         if (errorString != null) {
-            xml.attribute("errorstring", errorString);
+            xml.attribute("errorstring", errorString)
         }
-
-        xml.attribute("mime", getMimeType());
-        xml.rightAngleBracket();
-        xml.append(joinChildElementPairs(getChildElementPairs()));
-        return xml;
+        xml.attribute("mime", mimeType)
+        xml.rightAngleBracket()
+        xml.append(joinChildElementPairs(childElementPairs))
+        return xml
     }
 
-    protected String getMimeType() {
-        return mimeType;
-    }
-
-    private String joinChildElementPairs(Map<String, Object> pairs) {
-        List<String> parts = new ArrayList<>();
-        for (Entry<String, Object> pair : pairs.entrySet()) {
-            parts.add(pair.getKey() + "=" + pair.getValue());
+    private fun joinChildElementPairs(pairs: Map<String, Any?>): String {
+        val parts: MutableList<String> = ArrayList()
+        for ((key, value) in pairs) {
+            parts.add("$key=$value")
         }
-        return Joiner.on(":").join(parts);
+        return Joiner.on(":").join(parts)
     }
 
-    protected abstract Map<String, Object> getChildElementPairs();
+    protected abstract val childElementPairs: Map<String, Any?>
+    val isContinuePacket: Boolean
+        get() = "100" == statusCode
 
-    public boolean isContinuePacket() {
-        return "100".equals(statusCode);
+    protected fun generateTimestamp(): Long {
+        return System.currentTimeMillis() - CREATION_TIME
     }
 
-    protected long generateTimestamp() {
-        return System.currentTimeMillis() - CREATION_TIME;
+    companion object {
+        private val CREATION_TIME = System.currentTimeMillis()
     }
 }

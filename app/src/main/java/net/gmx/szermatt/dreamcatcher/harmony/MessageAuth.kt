@@ -1,125 +1,82 @@
-package net.gmx.szermatt.dreamcatcher.harmony;
+package net.gmx.szermatt.dreamcatcher.harmony
 
-import static java.lang.String.format;
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.google.common.collect.ImmutableMap
+import com.google.common.io.BaseEncoding
+import org.jivesoftware.smack.packet.IQ
+import java.util.*
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.io.BaseEncoding;
-
-import org.jivesoftware.smack.packet.IQ;
-
-import java.util.Map;
-import java.util.UUID;
-
-class MessageAuth {
-    public static String MIME_TYPE = "vnd.logitech.connect/vnd.logitech.pair";
+internal object MessageAuth {
+    var MIME_TYPE = "vnd.logitech.connect/vnd.logitech.pair"
 
     /*
      * Request
      */
-    public static class AuthRequest extends OAStanza {
-        public AuthRequest() {
-            super(MIME_TYPE);
-            setType(IQ.Type.get);
+    class AuthRequest : OAStanza(MIME_TYPE) {
+        init {
+            type = Type.get
         }
 
-        @Override
-        protected Map<String, Object> getChildElementPairs() {
-            return ImmutableMap.<String, Object>builder() //
-                    .put("method", "pair")
-                    .put("name", generateUniqueId() + "#" + getDeviceIdentifier())
-                    .build();
+        //
+        protected override val childElementPairs: Map<String, Any?>
+            protected get() = ImmutableMap.builder<String, Any?>() //
+                .put("method", "pair")
+                .put("name", generateUniqueId() + "#" + deviceIdentifier)
+                .build()
+
+        private fun generateUniqueId(): String {
+            return BaseEncoding.base64().encode(UUID.randomUUID().toString().toByteArray())
         }
 
-        private String generateUniqueId() {
-            return BaseEncoding.base64().encode(UUID.randomUUID().toString().getBytes());
-        }
-
-        private String getDeviceIdentifier() {
-            return "iOS6.0.1#iPhone";
-        }
+        private val deviceIdentifier: String
+            private get() = "iOS6.0.1#iPhone"
     }
 
     /*
      * Reply
      */
-    public static class AuthReply extends OAStanza {
-        private String serverIdentity;
-        private String hubId;
-        private String identity;
-        private String status;
-        private Map<String, String> protocolVersion;
-        private Map<String, String> hubProfiles;
-        private String productId;
-        private String friendlyName;
+    class AuthReply @JsonCreator constructor() : OAStanza(MIME_TYPE) {
+        val serverIdentity: String? = null
+        val hubId: String? = null
+        val password: String? = null
+        val status: String? = null
+        val protocolVersion: Map<String, String>? = null
+        val hubProfiles: Map<String, String>? = null
+        val productId: String? = null
+        val friendlyName: String? = null
 
-        @JsonCreator
-        public AuthReply() {
-            super(MIME_TYPE);
-        }
-
-        @Override
-        protected Map<String, Object> getChildElementPairs() {
-            return ImmutableMap.<String, Object>builder() //
-                    .put("serverIdentity", serverIdentity)
-                    .put("hubId", hubId)
-                    .put("identity", identity)
-                    .put("status", status)
-                    .put("protocolVersion", protocolVersion)
-                    .put("hubProfiles", hubProfiles)
-                    .put("productId", productId)
-                    .put("friendlyName", friendlyName)
-                    .build();
-        }
-
-        public String getUsername() {
-            return format("%s@connect.logitech.com/gatorade", identity);
-        }
-
-        public String getPassword() {
-            return identity;
-        }
-
-        public String getServerIdentity() {
-            return serverIdentity;
-        }
-
-        public String getHubId() {
-            return hubId;
-        }
-
-        public String getIdentity() {
-            return identity;
-        }
-
-        public String getStatus() {
-            return status;
-        }
-
-        public Map<String, String> getProtocolVersion() {
-            return protocolVersion;
-        }
-
-        public Map<String, String> getHubProfiles() {
-            return hubProfiles;
-        }
-
-        public String getProductId() {
-            return productId;
-        }
-
-        public String getFriendlyName() {
-            return friendlyName;
-        }
+        //
+        protected override val childElementPairs: Map<String, Any?>
+            protected get() = ImmutableMap.builder<String, Any?>() //
+                .put("serverIdentity", serverIdentity)
+                .put("hubId", hubId)
+                .put("identity", password)
+                .put("status", status)
+                .put("protocolVersion", protocolVersion)
+                .put("hubProfiles", hubProfiles)
+                .put("productId", productId)
+                .put("friendlyName", friendlyName)
+                .build()
+        val username: String
+            get() = String.format("%s@connect.logitech.com/gatorade", password)
     }
 
     /*
      * Parser
      */
-    public static class AuthReplyParser extends OAReplyParser {
-        @Override
-        public IQ parseReplyContents(String statusCode, String errorString, String contents) {
-            return Jackson.OBJECT_MAPPER.convertValue(parseKeyValuePairs(statusCode, errorString, contents), AuthReply.class);
+    class AuthReplyParser : OAReplyParser() {
+        override fun parseReplyContents(
+            statusCode: String?,
+            errorString: String?,
+            contents: String
+        ): IQ {
+            return Jackson.OBJECT_MAPPER.convertValue<AuthReply>(
+                OAReplyParser.Companion.parseKeyValuePairs(
+                    statusCode,
+                    errorString,
+                    contents
+                ), AuthReply::class.java
+            )
         }
     }
 }
