@@ -2,12 +2,10 @@ package net.gmx.szermatt.dreamcatcher.harmony
 
 import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream
 import com.fasterxml.jackson.databind.util.ByteBufferBackedOutputStream
-import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.*
 import java.nio.ByteBuffer
-import javax.net.SocketFactory
 
 /** A fake socket backed by an input and output buffer. */
 class FakeSocket(
@@ -25,7 +23,6 @@ class FakeSocket(
 internal class FakeSocketImplFactory(private val next: () -> FakeSocket): SocketImplFactory {
     override fun createSocketImpl(): SocketImpl = FakeSocketImpl(next())
 }
-
 
 ///** A factory that returns [FakeSocket]s. */
 //class FakeSocketFactory(

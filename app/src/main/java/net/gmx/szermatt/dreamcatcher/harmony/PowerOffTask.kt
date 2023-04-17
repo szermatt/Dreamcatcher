@@ -23,11 +23,10 @@ import java.io.IOException
 import java.net.InetAddress
 import java.util.concurrent.CancellationException
 import java.util.concurrent.locks.ReentrantLock
-import javax.net.SocketFactory
 
 /** Sends a power off command to the Harmony hub.  */
 class PowerOffTask(
-    private val socketFactory: SocketFactory? = null
+    private val host: String = "192.168.1.116"
 ) {
     /**
      * To prevent timeouts when different threads send a message and expect a response, create a lock that only allows a
@@ -58,11 +57,10 @@ class PowerOffTask(
     fun run() {
         init()
         val config = XMPPTCPConnectionConfiguration.builder()
-            .setHostAddress(InetAddress.getByName("192.168.1.116"))
+            .setHostAddress(InetAddress.getByName(host))
             .setPort(DEFAULT_PORT)
             .setXmppDomain("harmonyhub.zia")
             .addEnabledSaslMechanism(SASLMechanism.PLAIN)
-            .setSocketFactory(socketFactory ?: SocketFactory.getDefault())
             .build()
         val authReply = authenticate(config)
             ?: throw HarmonyProtocolException("Session authentication failed")
