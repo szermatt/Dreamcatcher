@@ -10,20 +10,9 @@ import java.util.concurrent.TimeUnit
 @RunWith(RobolectricTestRunner::class)
 class PowerOffTaskTest {
 
-    companion object {
-        val sockets = ArrayBlockingQueue<FakeSocket>(10)
-        var socketImplSetup = false
-    }
-
     @Test
     fun run() {
-        if (!socketImplSetup) {
-            Socket.setSocketImplFactory(FakeSocketImplFactory {
-                sockets.poll(10, TimeUnit.SECONDS)
-                    ?: throw IllegalStateException("No FakeSocket available")
-            })
-            socketImplSetup = true
-        }
+        initSocketImpl()
         val authSocket = FakeSocket()
         sockets.add(authSocket)
 
@@ -32,5 +21,24 @@ class PowerOffTaskTest {
 
         val task = PowerOffTask("127.0.0.1")
         task.run()
+    }
+
+    private fun initSocketImpl() {
+        synchronized(classLock) {
+            if (socketImplSetup) {
+                return
+            }
+            Socket.setSocketImplFactory(FakeSocketImplFactory {
+                sockets.poll(10, TimeUnit.SECONDS)
+                    ?: throw IllegalStateException("No FakeSocket available")
+            })
+            socketImplSetup = true
+        }
+    }
+
+    companion object {
+        val classLock = Any() // protects fields below
+        val sockets = ArrayBlockingQueue<FakeSocket>(10)
+        var socketImplSetup = false
     }
 }
