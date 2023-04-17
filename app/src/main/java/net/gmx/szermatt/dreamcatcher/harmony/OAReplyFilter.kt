@@ -32,12 +32,13 @@ internal class OAReplyFilter(request: OAStanza, connection: XMPPConnection) : St
         iqAndIdFilter = AndFilter(iqFilter, idFilter)
         fromFilter = OrFilter()
         fromFilter.addFilter(FromMatchesFilter.createFull(to))
+        val l = local
         if (to == null) {
-            if (local != null) {
-                fromFilter.addFilter(FromMatchesFilter.createBare(local))
+            if (l != null) {
+                fromFilter.addFilter(FromMatchesFilter.createBare(l))
             }
             fromFilter.addFilter(FromMatchesFilter.createFull(server))
-        } else if (local != null && to.equals(local.asBareJid())) {
+        } else if (l != null && to.equals(l.asBareJid())) {
             fromFilter.addFilter(FromMatchesFilter.createFull(null))
         }
     }

@@ -1,6 +1,5 @@
 package net.gmx.szermatt.dreamcatcher.harmony
 
-import com.fasterxml.jackson.core.JsonProcessingException
 import com.google.common.collect.ImmutableMap
 import org.jivesoftware.smack.packet.IQ
 
@@ -9,7 +8,7 @@ internal object MessageStartActivity {
     const val MIME_TYPE2 = "harmony.engine?startActivity"
 
     /** Request */
-    class StartActivityRequest(private val activityId: Int) : OaStanza(MIME_TYPE) {
+    class StartActivityRequest(private val activityId: Int) : OAStanza(MIME_TYPE) {
         override val childElementPairs: Map<String, Any?>
             get() = ImmutableMap.builder<String, Any?>()
                 .put("activityId", activityId)

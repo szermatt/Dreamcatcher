@@ -16,7 +16,7 @@ internal object MessageAuth {
         }
 
         override val childElementPairs: Map<String, Any?>
-            get() = ImmutableMap.builder<String, Any?>() //
+            get() = ImmutableMap.builder<String, String?>() //
                 .put("method", "pair")
                 .put("name", generateUniqueId() + "#" + deviceIdentifier)
                 .build()
@@ -41,16 +41,18 @@ internal object MessageAuth {
         val friendlyName: String? = null
 
         override val childElementPairs: Map<String, Any?>
-            get() = ImmutableMap.builder<String, Any?>()
-                .put("serverIdentity", serverIdentity)
-                .put("hubId", hubId)
-                .put("identity", password)
-                .put("status", status)
-                .put("protocolVersion", protocolVersion)
-                .put("hubProfiles", hubProfiles)
-                .put("productId", productId)
-                .put("friendlyName", friendlyName)
-                .build()
+            get() {
+                val b = ImmutableMap.builder<String, Any?>()
+                if (serverIdentity != null) b.put("serverIdentity", serverIdentity)
+                if (hubId != null) b.put("hubId", hubId)
+                if (password != null) b.put("identity", password)
+                if (status != null) b.put("status", status)
+                if (protocolVersion != null) b.put("protocolVersion", protocolVersion)
+                if (hubProfiles != null) b.put("hubProfiles", hubProfiles)
+                if (productId != null) b.put("productId", productId)
+                if (friendlyName != null) b.put("friendlyName", friendlyName)
+                return b.build()
+            }
         val username: String
             get() = String.format("%s@connect.logitech.com/gatorade", password)
     }
@@ -67,7 +69,7 @@ internal object MessageAuth {
                     statusCode,
                     errorString,
                     contents
-                ), AuthReply::class.java
+                ), MessageAuth.AuthReply::class.java
             )
         }
     }

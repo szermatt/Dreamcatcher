@@ -19,7 +19,7 @@ class TvActivity : Activity() {
         val inBackground = DreamCatcherApplication.inBackground(this)
         val onMain = DreamCatcherApplication.onMain(this)
         val button = findViewById<ImageButton>(R.id.power_off)
-        button.setOnClickListener { v: View? ->
+        button.setOnClickListener { _: View? ->
             Toast.makeText(this, "Power Off Requested", Toast.LENGTH_LONG).show()
             inBackground.execute {
                 try {

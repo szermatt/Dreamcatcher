@@ -6,7 +6,7 @@ import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.SimpleIQ
 import org.jivesoftware.smack.packet.XMPPError
 
-internal abstract class OAStanza(protected val mimeType: String?) :
+abstract class OAStanza(protected val mimeType: String?) :
     IQ(object : SimpleIQ("oa", "connect.logitech.com") {}) {
     var statusCode: String? = null
     var errorString: String? = null

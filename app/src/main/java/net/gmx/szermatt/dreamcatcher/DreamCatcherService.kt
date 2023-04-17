@@ -10,14 +10,7 @@ import android.content.IntentFilter
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.work.Constraints.Builder.build
-import androidx.work.Constraints.Builder.setRequiredNetworkType
-import androidx.work.NetworkType
-import androidx.work.WorkManager
-import androidx.work.WorkRequest.Builder.addTag
-import androidx.work.WorkRequest.Builder.build
-import androidx.work.WorkRequest.Builder.setConstraints
-import androidx.work.WorkRequest.Builder.setInitialDelay
+import androidx.work.*
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 import java.util.concurrent.TimeUnit
 
@@ -43,9 +36,9 @@ class DreamCatcherService : Service() {
         override fun onReceive(context: Context, intent: Intent) {
             Log.d(TAG, "Dreaming started")
             WorkManager.getInstance(context).enqueue(
-                Builder(PowerOffWorker::class.java)
+                OneTimeWorkRequest.Builder(PowerOffWorker::class.java)
                     .setConstraints(
-                        Builder()
+                        Constraints.Builder()
                             .setRequiredNetworkType(NetworkType.CONNECTED)
                             .build()
                     )
