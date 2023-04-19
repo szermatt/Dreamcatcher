@@ -5,15 +5,34 @@ import java.io.OutputStream
 import java.net.*
 import java.nio.charset.Charset
 
-/** A fake socket backed by an input and output buffer. */
+/** A fake socket backed by an input and output pipe. */
 class FakeSocket() {
+    /**
+     * The pipe that represents this socket input.
+     *
+     * Use `input.inputStream` to read data from the socket, `input.outputStream` to simulate
+     * the remote end sending data through the socket.
+     */
     val input = Pipe()
+
+    /**
+     * The pipe that represents this socket output.
+     *
+     * Use `output.outputStream` to write data to the socket, `output.inputStream` to simulate
+     * the remote end receiving data through the socket.
+     */
     val output = Pipe()
 
+    /** The address connected to, to be checked in tests. */
     var connectedTo: SocketAddress? = null
+
+    /** The local address the socket is bound to, to be checked in tests. */
     var boundTo: InetSocketAddress? = null
+
+    /** Whether the socket has been closed. */
     var closed = false
 
+    /** Dumps data to stdout when written or read from the socket. */
     fun dumpAs(header: String, charset: Charset) {
         output.dumpAs("$header OUT", charset)
         input.dumpAs("$header IN", charset)

@@ -8,7 +8,6 @@ import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.util.*
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.collections.ArrayDeque
 import kotlin.concurrent.withLock
@@ -26,6 +25,11 @@ class Pipe {
     private var dumpHeader = "Pipe"
     private var dumpCharset = Charsets.UTF_8
 
+    /**
+     * The stream to use to read from the pipe.
+     *
+     * Reading past the data currently available blocks until [outputStream] has been closed.
+     */
     val inputStream = object : InputStream() {
         override fun available(): Int {
             val sum = lock.withLock {
@@ -66,6 +70,12 @@ class Pipe {
             return i
         }
 
+        /**
+         * Reads one byte, returns -1 on EOS.
+         *
+         * When the pipe is empty, but unclosed and [blocking] is true, this call blocks. Otherwise,
+         * the call returns -1 as it would when the end of the stream has been reached.
+         */
         private fun readInternal(blocking: Boolean): Int {
             lock.withLock {
                 while (true) {
@@ -78,12 +88,14 @@ class Pipe {
                     if (closed || !blocking) {
                         return -1
                     }
-                    blockCondition.await(5, TimeUnit.SECONDS)
+                    blockCondition.await()
                     println("$dumpHeader unblocked")
                 }
             }
         }
     }
+
+    /** The stream to use to write to the pipe. */
     val outputStream = object : OutputStream() {
         override fun write(b: Int) {
             write(byteArrayOf(b.toByte()), 0, 1)
@@ -119,7 +131,7 @@ class Pipe {
         }
     }
 
-    /** Close the pipe for writing. The pipe is still available for reading until EOF. */
+    /** Closes the pipe for writing. The pipe is still available for reading until EOS. */
     fun close() {
         outputStream.close()
     }
@@ -127,7 +139,7 @@ class Pipe {
     /** Returns the number of bytes available to be read without blocking. */
     fun available() = inputStream.available()
 
-    /** Dump data as it is written to stdout. */
+    /** Dump data to stdout, when it is written to the pipe. */
     fun dumpAs(header: String, charset: Charset) {
         dump = true
         dumpHeader = header
