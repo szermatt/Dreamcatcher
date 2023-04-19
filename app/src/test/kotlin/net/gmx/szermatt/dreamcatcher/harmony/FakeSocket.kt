@@ -1,103 +1,31 @@
 package net.gmx.szermatt.dreamcatcher.harmony
 
-import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream
-import com.fasterxml.jackson.databind.util.ByteBufferBackedOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.*
-import java.nio.ByteBuffer
+import java.nio.charset.Charset
 
 /** A fake socket backed by an input and output buffer. */
-class FakeSocket(
-    val input: ByteBuffer,
-    val output: ByteBuffer,
-) {
-    /** A fake socket with buffers of default size.*/
-    constructor() : this(ByteBuffer.allocate(1024), ByteBuffer.allocate(1024)) {}
+class FakeSocket() {
+    val input = Pipe()
+    val output = Pipe()
 
-    var connectedTo : SocketAddress? = null
-    var boundTo : InetSocketAddress? = null
+    var connectedTo: SocketAddress? = null
+    var boundTo: InetSocketAddress? = null
     var closed = false
+
+    fun dumpAs(header: String, charset: Charset) {
+        output.dumpAs("$header OUT", charset)
+        input.dumpAs("$header IN", charset)
+    }
 }
 
 internal class FakeSocketImplFactory(private val next: () -> FakeSocket): SocketImplFactory {
     override fun createSocketImpl(): SocketImpl = FakeSocketImpl(next())
 }
 
-///** A factory that returns [FakeSocket]s. */
-//class FakeSocketFactory(
-//    private val next: () -> FakeSocket
-//) : SocketFactory() {
-//
-//    override fun createSocket() : Socket = Socket(FakeSocketImpl(next()))
-//
-//    override fun createSocket(host: String?, port: Int) =
-//        createSocket(host, port, null, 0)
-//
-//    override fun createSocket(
-//        host: String?,
-//        port: Int,
-//        localHost: InetAddress?,
-//        localPort: Int
-//    ) = internalCreateSocket(InetAddress.getAllByName(host), port, localHost, localPort)
-//
-//    override fun createSocket(host: InetAddress?, port: Int) =
-//        internalCreateSocket(if (host != null) arrayOf(host) else arrayOf(), port)
-//
-//    override fun createSocket(
-//        address: InetAddress?,
-//        port: Int,
-//        localAddress: InetAddress?,
-//        localPort: Int
-//    ) = internalCreateSocket(
-//        if (address == null) {
-//            arrayOf()
-//        } else {
-//            arrayOf(address)
-//        },
-//        port,
-//        localAddress,
-//        localPort
-//    )
-//
-//    private fun internalCreateSocket(
-//        addresses: Array<InetAddress>,
-//        port: Int,
-//        localAddress: InetAddress?,
-//        localPort: Int
-//    ) : Socket {
-//        var lastE : IOException = null
-//        val localSocketAddress = if (localAddress != null) {
-//            InetSocketAddress(localAddress, localPort)
-//        } else {
-//            null
-//        }
-//        if (addresses.isEmpty()) {
-//            val s = Socket(FakeSocketImpl(next()))
-//            if (localSocketAddress != null) {
-//                s.bind(localSocketAddress)
-//            }
-//            return s
-//        }
-//        for (address in addresses) {
-//            val s = Socket(FakeSocketImpl(next()))
-//            if (localSocketAddress != null) {
-//                s.bind(localSocketAddress)
-//            }
-//            try {
-//                s.connect(InetSocketAddress(address, port))
-//                return s
-//            } catch (e: IOException) {
-//                lastE = e
-//            }
-//        }
-//        throw lastE!!
-//    }
-//}
 
 internal class FakeSocketImpl(private val socket : FakeSocket) : SocketImpl() {
-    private val inputStream = ByteBufferBackedInputStream(socket.input)
-    private val outputStream = ByteBufferBackedOutputStream(socket.output)
     private val options = mutableMapOf<Int, Any>()
     private var stream = false
 
@@ -142,18 +70,20 @@ internal class FakeSocketImpl(private val socket : FakeSocket) : SocketImpl() {
     }
 
     override fun getInputStream(): InputStream {
-        return inputStream
+        return socket.input.inputStream
     }
 
     override fun getOutputStream(): OutputStream {
-        return outputStream
+        return socket.output.outputStream
     }
 
     override fun available(): Int {
-        return 0
+        return socket.input.inputStream.available()
     }
 
     override fun close() {
+        socket.output.outputStream.close()
+        socket.input.inputStream.close()
         socket.closed = true
     }
 

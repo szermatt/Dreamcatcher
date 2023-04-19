@@ -59,7 +59,7 @@ class PowerOffTask(
         val config = XMPPTCPConnectionConfiguration.builder()
             .setHostAddress(InetAddress.getByName(host))
             .setPort(DEFAULT_PORT)
-            .setXmppDomain("harmonyhub.zia")
+            .setXmppDomain("harmonyhub")
             .addEnabledSaslMechanism(SASLMechanism.PLAIN)
             .build()
         val authReply = authenticate(config)
