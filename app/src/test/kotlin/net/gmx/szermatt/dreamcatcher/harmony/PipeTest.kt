@@ -4,8 +4,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
+import org.junit.Assert.*
 import org.junit.Test
 import java.io.IOException
 import java.util.concurrent.Executors
@@ -81,5 +80,27 @@ class PipeTest {
         } finally {
             threadPool.shutdown()
         }
+    }
+
+    @Test
+    fun readIncompleteArrayUnclosedPipe() {
+        val p = Pipe()
+        p.outputStream.write(byteArrayOf(1, 2, 3, 4, 5))
+
+        val b = ByteArray(7)
+        assertEquals(5, p.inputStream.read(b))
+        assertArrayEquals(byteArrayOf(1, 2, 3, 4, 5, 0, 0), b)
+    }
+
+    @Test
+    fun readIncompleteArrayClosedPipe() {
+        val p = Pipe()
+        p.outputStream.write(byteArrayOf(1, 2, 3, 4, 5))
+        p.close()
+
+        val b = ByteArray(7)
+        assertEquals(5, p.inputStream.read(b))
+        assertArrayEquals(byteArrayOf(1, 2, 3, 4, 5, 0, 0), b)
+        assertEquals(-1, p.inputStream.read(b))
     }
 }
