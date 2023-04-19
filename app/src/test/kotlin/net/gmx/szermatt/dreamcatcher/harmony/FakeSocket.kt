@@ -5,6 +5,15 @@ import java.io.OutputStream
 import java.net.*
 import java.nio.charset.Charset
 
+/**
+ * Sets things up so that all new [Socket]s are backed by [FakeSocket]s.
+ *
+ * This can only be called once.
+ */
+fun initFakeSockets(next: () -> FakeSocket) {
+    Socket.setSocketImplFactory(FakeSocketImplFactory(next))
+}
+
 /** A fake socket backed by an input and output pipe. */
 class FakeSocket() {
     /**
@@ -39,12 +48,11 @@ class FakeSocket() {
     }
 }
 
-internal class FakeSocketImplFactory(private val next: () -> FakeSocket): SocketImplFactory {
+private class FakeSocketImplFactory(private val next: () -> FakeSocket) : SocketImplFactory {
     override fun createSocketImpl(): SocketImpl = FakeSocketImpl(next())
 }
 
-
-internal class FakeSocketImpl(private val socket : FakeSocket) : SocketImpl() {
+private class FakeSocketImpl(private val socket: FakeSocket) : SocketImpl() {
     private val options = mutableMapOf<Int, Any>()
     private var stream = false
 

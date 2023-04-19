@@ -12,6 +12,12 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.collections.ArrayDeque
 import kotlin.concurrent.withLock
 
+/**
+ * An in-memory pipe backed by two [InputStream]/[OutputStream] pairs.
+ *
+ * Reading from the pipe will block until the output stream is closed if there's nothing to read,
+ * writing, on the other hand, is unlimited.
+ */
 class Pipe {
     private val lock = ReentrantLock()
     private val blockCondition = lock.newCondition()
@@ -21,6 +27,7 @@ class Pipe {
 
     @GuardedBy("lock")
     private var closed = false
+
     private var dump = false
     private var dumpHeader = "Pipe"
     private var dumpCharset = Charsets.UTF_8
@@ -30,7 +37,27 @@ class Pipe {
      *
      * Reading past the data currently available blocks until [outputStream] has been closed.
      */
-    val inputStream = object : InputStream() {
+    val inputStream: InputStream = PipeInputStream()
+
+    /** The stream to use to write to the pipe. */
+    val outputStream: OutputStream = PipeOutputStream()
+
+    /** Closes the pipe for writing. The pipe is still available for reading until EOS. */
+    fun close() {
+        outputStream.close()
+    }
+
+    /** Returns the number of bytes available to be read without blocking. */
+    fun available() = inputStream.available()
+
+    /** Dump data to stdout, when it is written to the pipe. */
+    fun dumpAs(header: String, charset: Charset) {
+        dump = true
+        dumpHeader = header
+        dumpCharset = charset
+    }
+
+    private inner class PipeInputStream : InputStream() {
         override fun available(): Int {
             val sum = lock.withLock {
                 queue.sumOf { it.remaining() }
@@ -95,8 +122,7 @@ class Pipe {
         }
     }
 
-    /** The stream to use to write to the pipe. */
-    val outputStream = object : OutputStream() {
+    private inner class PipeOutputStream : OutputStream() {
         override fun write(b: Int) {
             write(byteArrayOf(b.toByte()), 0, 1)
         }
@@ -129,20 +155,5 @@ class Pipe {
                 blockCondition.signalAll()
             }
         }
-    }
-
-    /** Closes the pipe for writing. The pipe is still available for reading until EOS. */
-    fun close() {
-        outputStream.close()
-    }
-
-    /** Returns the number of bytes available to be read without blocking. */
-    fun available() = inputStream.available()
-
-    /** Dump data to stdout, when it is written to the pipe. */
-    fun dumpAs(header: String, charset: Charset) {
-        dump = true
-        dumpHeader = header
-        dumpCharset = charset
     }
 }
