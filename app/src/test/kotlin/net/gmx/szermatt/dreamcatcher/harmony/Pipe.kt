@@ -75,10 +75,8 @@ class Pipe {
         }
 
         override fun read(b: ByteArray?, off: Int, len: Int): Int {
-            Objects.checkFromIndexSize(off, len, b!!.size)
-            if (len == 0) {
-                return 0
-            }
+            Objects.checkFromIndexSize(off, len, b?.size ?: 0)
+            if (len == 0) return 0
 
             val initial = readInternal(true)
             if (initial == -1) return -1
@@ -116,7 +114,6 @@ class Pipe {
                         return -1
                     }
                     blockCondition.await()
-                    println("$dumpHeader unblocked")
                 }
             }
         }
