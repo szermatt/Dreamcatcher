@@ -3,14 +3,10 @@ package net.gmx.szermatt.dreamcatcher.harmony
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.jivesoftware.smack.util.PacketParserUtils
-import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.xmlpull.v1.XmlPullParser
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -36,54 +32,95 @@ class PowerOffTaskTest {
         try {
             runBlocking(threadPool.asCoroutineDispatcher()) {
                 launch {
-                    println("running task")
                     task.run()
-                    println("task done")
                 }
+                runAuth(authSocket)
+                runMain(mainSocket)
 
-
-                println("running test; read from auth")
-                val parser = PacketParserUtils.getParserFor(
-                    InputStreamReader(
-                        authSocket.output.inputStream,
-                        Charsets.UTF_8
-                    )
-                )
-                assertEquals(XmlPullParser.START_TAG, parser.eventType)
-                assertEquals("stream", parser.name)
-                assertEquals("http://etherx.jabber.org/streams", parser.namespace)
-
-                println("write to auth")
-                val writer =
-                    OutputStreamWriter(authSocket.input.outputStream, Charsets.ISO_8859_1)
-                writer.write(
-                    """<?xml version='1.0' encoding='iso-8859-1'?>
-                <stream:stream from='harmonyhub' id='068adbb1' version='1.0' xmlns='jabber:client' xmlns:stream='http://etherx.jabber.org/streams'>
-                <stream:features>
-                    <mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>
-                        <mechanism>PLAIN</mechanism>
-                    </mechanisms>
-                </stream:features>""".trimIndent()
-                )
-                writer.flush()
-                println("written stream")
-
-
-
-                println("got stream")
-
-
-
-                println("got tag")
-                parser.nextTag()
-                assertEquals(XmlPullParser.START_TAG, parser.eventType)
-                assertEquals("auth", parser.name)
-                assertEquals("urn:ietf:params:xml:ns:xmpp-sasl", parser.namespace)
-                println("got auth")
+                // TODO: check addresses
             }
-
         } finally {
             threadPool.shutdown()
+        }
+    }
+
+    /** Runs the XMPP session that gets the credentials. */
+    private fun runAuth(socket: FakeSocket) {
+        val parser = XmppTestParser(socket.output.inputStream, Charsets.UTF_8)
+        val writer = XmppTestWriter(socket.input.outputStream, Charsets.ISO_8859_1)
+
+        parser.consumeStream {
+            writer.openStreamWithPlainAuth()
+            parser.processAuth(writer)
+            parser.consumeStream {
+                writer.openStreamWithSession()
+                parser.processBind(writer, "auth")
+                parser.processSession(writer)
+                parser.processRoster(writer)
+                parser.processPresence(writer)
+                parser.consumeIq("get") { id ->
+                    parser.consumeTag("oa", "connect.logitech.com") {
+                        // TODO: check OA command
+                        writer.send(
+                            """<iq id="$id" to="client@1111/auth" type="get"> 
+                                <oa errorcode='200' errorstring='OK' mime='vnd.logitech.connect/vnd.logitech.pair' xmlns='connect.logitech.com'>
+                                    <![CDATA[serverIdentity=ed23c162a01b9ef7b2729c553eb8d7c0f841f7a3:hubId=106:identity=ed23c162a01b9ef7b2729c553eb8d7c0f841f7a3:status=succeeded:protocolVersion={XMPP="1.0", HTTP="1.0", RF="1.0", WEBSOCKET="1.0"}:hubProfiles={Harmony="2.0"}:productId=Pimento:friendlyName=ia]]>                            
+                                </oa>
+                            </iq>"""
+                        )
+                    }
+                }
+                parser.expectCloseStream()
+            }
+            // The outer stream tag is never actually closed
+        }
+        writer.close()
+    }
+
+    /** Runs the XMPP session that executes the power off command. */
+    private fun runMain(socket: FakeSocket) {
+        val parser = XmppTestParser(socket.output.inputStream, Charsets.UTF_8)
+        val writer = XmppTestWriter(socket.input.outputStream, Charsets.ISO_8859_1)
+        parser.consumeStream {
+            writer.openStreamWithPlainAuth()
+            parser.processAuth(writer) // TODO: check auth credentials
+            parser.consumeStream {
+                writer.openStreamWithSession()
+                parser.processBind(writer, "main")
+                parser.processSession(writer)
+                parser.processRoster(writer)
+                parser.processPresence(writer)
+                parser.consumeIq("get") { id ->
+                    parser.consumeTag("oa", "connect.logitech.com") {
+                        // TODO: check OA power off command
+                        writer.send(
+                            """<iq id="$id" to="client@1111/main" type="get">
+                <oa errorcode='200'
+                    errorstring='OK'
+                    mime='vnd.logitech.harmony/vnd.logitech.harmony.engine?startactivity' xmlns='connect.logitech.com'></oa>
+            </iq>"""
+                        )
+                    }
+                }
+                parser.expectCloseStream()
+            }
+            // The outer stream tag is never actually closed
+        }
+        writer.close()
+    }
+
+    private fun skipToEndTag(parser: XmlPullParser) {
+        var depth = 0
+        while (true) {
+            when (parser.next()) {
+                XmlPullParser.START_TAG -> depth++
+                XmlPullParser.END_TAG -> {
+                    if (depth == 0) return
+                    depth--
+                }
+                XmlPullParser.END_DOCUMENT ->
+                    throw IllegalStateException("unexpected END_DOCUMENT")
+            }
         }
     }
 
