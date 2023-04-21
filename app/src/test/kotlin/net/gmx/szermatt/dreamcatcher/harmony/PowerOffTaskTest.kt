@@ -3,6 +3,7 @@ package net.gmx.szermatt.dreamcatcher.harmony
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -60,6 +61,14 @@ class PowerOffTaskTest {
                 parser.processPresence(writer)
                 parser.consumeIq("get") { id ->
                     parser.consumeTag("oa", "connect.logitech.com") {
+                        val contentMap: Map<String, String> =
+                            parser.consumeTextContent()
+                                .split(':')
+                                .map { Pair(it.substringBefore('='), it.substringAfter('=')) }
+                                .toMap()
+                        assertEquals("pair", contentMap["method"])
+                        assertEquals("iOS6.0.1#iPhone", contentMap["name"]?.substringAfter('#'))
+
                         writer.send(
                             """<iq id="$id" to="client@1111/auth" type="get"> 
                                 <oa errorcode='200' errorstring='OK' mime='vnd.logitech.connect/vnd.logitech.pair' xmlns='connect.logitech.com'>

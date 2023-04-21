@@ -126,6 +126,24 @@ class XmppTestParser(inputStream: InputStream, charset: Charset) {
             parser.next()
         }
     }
+
+    /** Returns the text content of the current tag or the empty string. */
+    fun consumeTextContent(): String {
+        if (parser.eventType == XmlPullParser.START_TAG) {
+            parser.next()
+        }
+        val sb = StringBuilder()
+        while (true) {
+            when (parser.eventType) {
+                XmlPullParser.TEXT -> sb.append(parser.text)
+                XmlPullParser.END_TAG -> {
+                    return sb.toString()
+                }
+                else -> throw IllegalStateException("Unexpected even type ${parser.eventType}")
+            }
+            parser.next()
+        }
+    }
 }
 
 /** A helper for writing XMPP output streamss. */
