@@ -62,9 +62,10 @@ class XmppTestParser(inputStream: InputStream, charset: Charset) {
     /** Moves to the next tag, which must be the one specified and executes [lambda] */
     fun consumeTag(localName: String, namespace: String? = null, lambda: (() -> Unit)? = null) {
         skipToTagStart()
+        val depth = parser.depth
         expectStartTag(localName, namespace)
         if (lambda != null) lambda()
-        skipToTagEnd()
+        skipToTagEnd(depth)
     }
 
     /** Expects that the parser is positioned on a `stream` start tag. */
@@ -74,15 +75,17 @@ class XmppTestParser(inputStream: InputStream, charset: Charset) {
     }
 
     /** Expects the current stream to be closed. */
-    fun expectCloseStream() {
-        skipToTagEnd()
+    private fun expectCloseStream(depth: Int) {
+        skipToTagEnd(depth)
         expectEndTag("stream", "http://etherx.jabber.org/streams")
     }
 
     /** Expects a stream and process it by executing [lambda]. */
-    fun consumeStream(lambda: () -> Unit) {
+    fun consumeStream(close: Boolean, lambda: () -> Unit) {
         expectOpenStream()
+        val depth = parser.depth
         lambda()
+        if (close) expectCloseStream(depth)
     }
 
     /** Expects that the parser is positioned on the specified tag. */
@@ -108,19 +111,19 @@ class XmppTestParser(inputStream: InputStream, charset: Charset) {
         parser.nextTag()
     }
 
-    /** Moves the parser to the end of the current tag. */
-    fun skipToTagEnd() {
-        var depth = 0
+    /** Moves the parser to the end of the tag at the given [depth]. */
+    fun skipToTagEnd(depth: Int) {
         while (true) {
-            when (parser.next()) {
-                XmlPullParser.START_TAG -> depth++
+            when (parser.eventType) {
                 XmlPullParser.END_TAG -> {
-                    if (depth == 0) return
-                    depth--
+                    if (depth == parser.depth) return
                 }
                 XmlPullParser.END_DOCUMENT ->
-                    throw IllegalStateException("unexpected END_DOCUMENT")
+                    throw IllegalStateException(
+                        "Reached end of the document without finding the end tag"
+                    )
             }
+            parser.next()
         }
     }
 }

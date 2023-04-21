@@ -9,9 +9,7 @@ import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
 
-/**
- * Copied from BindIQProvider, but tweaked to support the Harmony's JID that does not have a localpart (user)
- */
+/** A BindIQProvider that can deal with Harmony's JID missing a localpart (user). */
 internal class HarmonyBindIQProvider : IQProvider<Bind?>() {
     @Throws(XmlPullParserException::class, IOException::class, SmackException::class)
     override fun parse(parser: XmlPullParser, initialDepth: Int): Bind? {

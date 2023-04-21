@@ -44,15 +44,15 @@ class PowerOffTaskTest {
         }
     }
 
-    /** Runs the XMPP session that gets the credentials. */
+    /** Simulates the XMPP request sent to obtain the session token. */
     private fun runAuth(socket: FakeSocket) {
         val parser = XmppTestParser(socket.output.inputStream, Charsets.UTF_8)
         val writer = XmppTestWriter(socket.input.outputStream, Charsets.ISO_8859_1)
 
-        parser.consumeStream {
+        parser.consumeStream(close = false) { // The outer stream tag is never actually closed
             writer.openStreamWithPlainAuth()
             parser.processAuth(writer)
-            parser.consumeStream {
+            parser.consumeStream(close = true) {
                 writer.openStreamWithSession()
                 parser.processBind(writer, "auth")
                 parser.processSession(writer)
@@ -60,7 +60,6 @@ class PowerOffTaskTest {
                 parser.processPresence(writer)
                 parser.consumeIq("get") { id ->
                     parser.consumeTag("oa", "connect.logitech.com") {
-                        // TODO: check OA command
                         writer.send(
                             """<iq id="$id" to="client@1111/auth" type="get"> 
                                 <oa errorcode='200' errorstring='OK' mime='vnd.logitech.connect/vnd.logitech.pair' xmlns='connect.logitech.com'>
@@ -70,21 +69,19 @@ class PowerOffTaskTest {
                         )
                     }
                 }
-                parser.expectCloseStream()
             }
-            // The outer stream tag is never actually closed
         }
         writer.close()
     }
 
-    /** Runs the XMPP session that executes the power off command. */
+    /** Simulates logging into XMPP using the session token, then fire the power off command. */
     private fun runMain(socket: FakeSocket) {
         val parser = XmppTestParser(socket.output.inputStream, Charsets.UTF_8)
         val writer = XmppTestWriter(socket.input.outputStream, Charsets.ISO_8859_1)
-        parser.consumeStream {
+        parser.consumeStream(close = false) { // The outer stream tag is never actually closed
             writer.openStreamWithPlainAuth()
             parser.processAuth(writer) // TODO: check auth credentials
-            parser.consumeStream {
+            parser.consumeStream(close = true) {
                 writer.openStreamWithSession()
                 parser.processBind(writer, "main")
                 parser.processSession(writer)
@@ -102,9 +99,7 @@ class PowerOffTaskTest {
                         )
                     }
                 }
-                parser.expectCloseStream()
             }
-            // The outer stream tag is never actually closed
         }
         writer.close()
     }

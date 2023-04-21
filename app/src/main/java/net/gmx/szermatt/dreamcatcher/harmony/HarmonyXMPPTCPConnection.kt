@@ -11,6 +11,7 @@ import org.jivesoftware.smack.util.PacketParserUtils
 import org.jivesoftware.smack.util.ParserUtils
 import org.xmlpull.v1.XmlPullParser
 
+/** XMPPTCPConnection that can deal with harmonyhub's idiosyncrasies. */
 internal class HarmonyXMPPTCPConnection(config: XMPPTCPConnectionConfiguration?) :
     XMPPTCPConnection(config) {
     @Throws(Exception::class)

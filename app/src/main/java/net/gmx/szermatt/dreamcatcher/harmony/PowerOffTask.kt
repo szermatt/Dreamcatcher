@@ -1,10 +1,6 @@
 package net.gmx.szermatt.dreamcatcher.harmony
 
 import androidx.annotation.GuardedBy
-import net.gmx.szermatt.dreamcatcher.harmony.MessageAuth.AuthReply
-import net.gmx.szermatt.dreamcatcher.harmony.MessageAuth.AuthRequest
-import net.gmx.szermatt.dreamcatcher.harmony.MessageStartActivity.StartActivityReply
-import net.gmx.szermatt.dreamcatcher.harmony.MessageStartActivity.StartActivityRequest
 import org.jivesoftware.smack.SmackException
 import org.jivesoftware.smack.SmackException.NoResponseException
 import org.jivesoftware.smack.StanzaCollector
@@ -62,16 +58,12 @@ class PowerOffTask(
             .setXmppDomain("harmonyhub")
             .addEnabledSaslMechanism(SASLMechanism.PLAIN)
             .build()
-        val authReply = authenticate(config)
+        val authReply = obtainSessionToken(config)
             ?: throw HarmonyProtocolException("Session authentication failed")
         powerOff(config, authReply.username, authReply.password)
     }
 
-    /**
-     * Gets the session auth credentials.
-     *
-     * @return null if stopped, the credentials otherwise
-     */
+    /** Obtain a session token to login to the harmony hub. */
     @Throws(
         SmackException::class,
         IOException::class,
@@ -79,7 +71,7 @@ class PowerOffTask(
         InterruptedException::class,
         CancellationException::class
     )
-    private fun authenticate(config: XMPPTCPConnectionConfiguration): AuthReply? {
+    private fun obtainSessionToken(config: XMPPTCPConnectionConfiguration): SessionTokenReply? {
         val connection: XMPPTCPConnection = HarmonyXMPPTCPConnection(config)
         return try {
             cancelIfStopped()
@@ -94,8 +86,8 @@ class PowerOffTask(
             connection.fromMode = XMPPConnection.FromMode.USER
             sendOAStanza(
                 connection,
-                AuthRequest(),
-                AuthReply::class.java,
+                SessionTokenRequest(),
+                SessionTokenReply::class.java,
                 DEFAULT_REPLY_TIMEOUT.toLong()
             )
         } finally {
