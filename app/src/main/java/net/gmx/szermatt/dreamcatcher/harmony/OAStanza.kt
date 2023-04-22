@@ -1,13 +1,11 @@
 package net.gmx.szermatt.dreamcatcher.harmony
 
-import com.fasterxml.jackson.annotation.JsonIgnore
 import com.google.common.base.Joiner
 import org.jivesoftware.smack.XMPPConnection
 import org.jivesoftware.smack.filter.*
 import org.jivesoftware.smack.packet.IQ
 import org.jivesoftware.smack.packet.SimpleIQ
 import org.jivesoftware.smack.packet.Stanza
-import org.jivesoftware.smack.packet.XMPPError
 import org.jivesoftware.smack.provider.IQProvider
 import org.jxmpp.jid.Jid
 import org.xmlpull.v1.XmlPullParser
@@ -31,11 +29,6 @@ abstract class OAStanza(protected val mimeType: String?) :
     IQ(object : SimpleIQ("oa", "connect.logitech.com") {}) {
     var statusCode: String? = null
     var errorString: String? = null
-
-    @JsonIgnore // Subclasses use a Jackson object mapper that throws an exception for properties with multiple setters
-    override fun setError(error: XMPPError) {
-        super.setError(error)
-    }
 
     override fun getIQChildElementBuilder(xml: IQChildElementXmlStringBuilder): IQChildElementXmlStringBuilder {
         if (statusCode != null) {
@@ -78,6 +71,22 @@ internal abstract class OAReplyParser {
         return VALID_RESPONSES.contains(code)
     }
 
+    /**
+     * Parses [contents] formatted as a series of key/values as a Map.
+     *
+     * Supported format: `key1=value1:key2=value2:...
+     */
+    protected fun parseContentMap(contents: String): Map<String, String> {
+        return contents.split(':')
+            .map {
+                Pair(
+                    it.substringBefore('='),
+                    it.substringAfter('=')
+                )
+            }
+            .toMap()
+    }
+
     companion object {
         private val VALID_RESPONSES = setOf(
             "100",
@@ -85,65 +94,6 @@ internal abstract class OAReplyParser {
             "506", // Bluetooth not connected
             "566", // Command not found for device, recoverable
         )
-
-        @JvmStatic
-        protected fun parseKeyValuePairs(
-            statusCode: String?,
-            errorString: String?,
-            contents: String
-        ): Map<String, Any> {
-            val params: MutableMap<String, Any> = HashMap()
-            if (statusCode != null) {
-                params["statusCode"] = statusCode
-            }
-            if (errorString != null) {
-                params["errorString"] = errorString
-            }
-            for (pair in contents.split(":".toRegex()).dropLastWhile { it.isEmpty() }
-                .toTypedArray()) {
-                val key = pair.substringBefore('=')
-                val value = pair.substringAfter('=')
-                params[key] = if (value.startsWith("{")) {
-                    parsePseudoJson(value)
-                } else {
-                    value
-                }
-            }
-            return params
-        }
-
-        @JvmStatic
-        protected fun parsePseudoJson(v: String): Map<String, Any> {
-            val params: MutableMap<String, Any> = HashMap()
-            val value = v.substring(1, v.length - 1)
-            for (pair in value.split(", ?".toRegex()).dropLastWhile { it.isEmpty() }
-                .toTypedArray()) {
-                val key = pair.substringBefore('=')
-                params[key] = parsePseudoJsonValue(pair.substringAfter('='))
-            }
-            return params
-        }
-
-        private fun parsePseudoJsonValue(value: String): Any {
-            return when (value[0]) {
-                '{' -> parsePseudoJsonValue(value)
-                '"' -> value.substring(1, value.length - 1)
-                '\'' -> value.substring(1, value.length - 1)
-                else -> {
-                    try {
-                        return value.toLong()
-                    } catch (e: NumberFormatException) {
-                        // do nothing
-                    }
-                    try {
-                        return value.toDouble()
-                    } catch (e: NumberFormatException) {
-                        // do nothing
-                    }
-                    value
-                }
-            }
-        }
     }
 }
 

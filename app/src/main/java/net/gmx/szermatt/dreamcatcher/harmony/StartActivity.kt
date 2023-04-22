@@ -16,7 +16,7 @@ class StartActivityRequest(private val activityId: Int) :
 /** Start Activity Reply (unused) */
 class StartActivityReply : OAStanza(HarmonyMimeTypes.START_ACTIVITY) {
     override val childElementPairs: Map<String, Any?>
-        get() = ImmutableMap.builder<String, Any?>().build()
+        get() = mapOf()
 
     /** Parser for that kind of replies. */
     internal class Parser : OAReplyParser() {
@@ -25,10 +25,7 @@ class StartActivityReply : OAStanza(HarmonyMimeTypes.START_ACTIVITY) {
             errorString: String?,
             contents: String
         ): IQ {
-            return Jackson.OBJECT_MAPPER.convertValue<StartActivityReply>(
-                parseKeyValuePairs(statusCode, errorString, contents),
-                StartActivityReply::class.java
-            )
+            return StartActivityReply()
         }
 
         override fun validResponseCode(code: String?): Boolean {

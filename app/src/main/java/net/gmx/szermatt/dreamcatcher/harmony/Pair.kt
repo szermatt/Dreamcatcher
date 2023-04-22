@@ -1,6 +1,5 @@
 package net.gmx.szermatt.dreamcatcher.harmony
 
-import com.fasterxml.jackson.annotation.JsonCreator
 import com.google.common.collect.ImmutableMap
 import com.google.common.io.BaseEncoding
 import org.jivesoftware.smack.packet.IQ
@@ -27,28 +26,14 @@ class PairRequest : OAStanza(HarmonyMimeTypes.PAIR) {
 }
 
 /** Reply containing the session token. */
-class PairReply @JsonCreator constructor() : OAStanza(HarmonyMimeTypes.PAIR) {
-    val serverIdentity: String? = null
-    val hubId: String? = null
-    val identity: String? = null
-    val status: String? = null
-    val protocolVersion: Map<String, String>? = null
-    val hubProfiles: Map<String, String>? = null
-    val productId: String? = null
-    val friendlyName: String? = null
-
+class PairReply(val identity: String? = null) : OAStanza(HarmonyMimeTypes.PAIR) {
     override val childElementPairs: Map<String, Any?>
         get() {
-            val b = ImmutableMap.builder<String, Any?>()
-            if (serverIdentity != null) b.put("serverIdentity", serverIdentity)
-            if (hubId != null) b.put("hubId", hubId)
-            if (identity != null) b.put("identity", identity)
-            if (status != null) b.put("status", status)
-            if (protocolVersion != null) b.put("protocolVersion", protocolVersion)
-            if (hubProfiles != null) b.put("hubProfiles", hubProfiles)
-            if (productId != null) b.put("productId", productId)
-            if (friendlyName != null) b.put("friendlyName", friendlyName)
-            return b.build()
+            if (identity == null) {
+                return mapOf()
+            } else {
+                return mapOf("identity" to identity)
+            }
         }
 
     /** Parser for these replies. */
@@ -58,13 +43,8 @@ class PairReply @JsonCreator constructor() : OAStanza(HarmonyMimeTypes.PAIR) {
             errorString: String?,
             contents: String
         ): IQ {
-            return Jackson.OBJECT_MAPPER.convertValue(
-                parseKeyValuePairs(
-                    statusCode,
-                    errorString,
-                    contents
-                ), PairReply::class.java
-            )
+            val contentMap = parseContentMap(contents)
+            return PairReply(identity = contentMap["identity"])
         }
     }
 }
