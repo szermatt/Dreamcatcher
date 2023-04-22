@@ -1,12 +1,9 @@
 package net.gmx.szermatt.dreamcatcher.harmony
 
 import androidx.annotation.GuardedBy
-import org.jivesoftware.smack.SmackException
 import org.jivesoftware.smack.SmackException.NoResponseException
 import org.jivesoftware.smack.StanzaCollector
 import org.jivesoftware.smack.XMPPConnection
-import org.jivesoftware.smack.XMPPException
-import org.jivesoftware.smack.XMPPException.XMPPErrorException
 import org.jivesoftware.smack.android.AndroidSmackInitializer
 import org.jivesoftware.smack.packet.Bind
 import org.jivesoftware.smack.packet.Stanza
@@ -15,7 +12,6 @@ import org.jivesoftware.smack.sasl.SASLMechanism
 import org.jivesoftware.smack.tcp.XMPPTCPConnection
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration
 import org.jxmpp.jid.parts.Resourcepart
-import java.io.IOException
 import java.net.InetAddress
 import java.util.concurrent.CancellationException
 import java.util.concurrent.locks.ReentrantLock
@@ -59,22 +55,16 @@ class PowerOffTask(
             .setXmppDomain("harmonyhub")
             .addEnabledSaslMechanism(SASLMechanism.PLAIN)
             .build()
-        val identity = obtainSessionToken(config)?.identity
+        val identity = obtainSessionToken(config)
             ?: throw HarmonyProtocolException("Session authentication failed")
         powerOff(config, identity)
     }
 
     /** Obtain a session token to login to the harmony hub. */
-    @Throws(
-        SmackException::class,
-        IOException::class,
-        XMPPException::class,
-        InterruptedException::class,
-        CancellationException::class
-    )
-    private fun obtainSessionToken(config: XMPPTCPConnectionConfiguration): PairReply? {
+    @Throws(Exception::class)
+    private fun obtainSessionToken(config: XMPPTCPConnectionConfiguration): String? {
         val connection: XMPPTCPConnection = HarmonyXMPPTCPConnection(config)
-        return try {
+        try {
             cancelIfStopped()
             connection.connect()
             cancelIfStopped()
@@ -85,12 +75,13 @@ class PowerOffTask(
             )
             cancelIfStopped()
             connection.fromMode = XMPPConnection.FromMode.USER
-            sendOAStanza(
+            val reply = sendOAStanza(
                 connection,
                 PairRequest(),
                 PairReply::class.java,
                 DEFAULT_REPLY_TIMEOUT.toLong()
             )
+            return reply?.identity
         } finally {
             if (connection.isConnected) {
                 connection.disconnect()
@@ -99,18 +90,12 @@ class PowerOffTask(
     }
 
     /**
-     * Connect with the given credentials and send the power off command.
+     * Connect with the given session token and send the power off command.
      */
-    @Throws(
-        SmackException::class,
-        IOException::class,
-        XMPPException::class,
-        InterruptedException::class,
-        CancellationException::class
-    )
+    @Throws(Exception::class)
     private fun powerOff(
         config: XMPPTCPConnectionConfiguration,
-        identity: String,
+        sessionToken: String,
     ) {
         val connection: XMPPTCPConnection = HarmonyXMPPTCPConnection(config)
         try {
@@ -118,8 +103,8 @@ class PowerOffTask(
             connection.connect()
             cancelIfStopped()
             connection.login(
-                "${identity}@${XMPP_USER_DOMAIN}",
-                identity,
+                "${sessionToken}@${XMPP_USER_DOMAIN}",
+                sessionToken,
                 Resourcepart.from("main")
             )
             cancelIfStopped()
@@ -137,6 +122,7 @@ class PowerOffTask(
         }
     }
 
+    @Throws(Exception::class)
     private fun <R : OAStanza?> sendOAStanza(
         connection: XMPPTCPConnection, stanza: OAStanza, replyClass: Class<R>,
         replyTimeout: Long
@@ -146,19 +132,13 @@ class PowerOffTask(
         return try {
             connection.sendStanza(stanza)
             replyClass.cast(getNextStanzaSkipContinues(collector, replyTimeout, connection))
-        } catch (e: InterruptedException) {
-            throw RuntimeException("Failed communicating with Harmony Hub", e)
-        } catch (e: SmackException) {
-            throw RuntimeException("Failed communicating with Harmony Hub", e)
-        } catch (e: XMPPErrorException) {
-            throw RuntimeException("Failed communicating with Harmony Hub", e)
         } finally {
             mMessageLock.unlock()
             collector.cancel()
         }
     }
 
-    @Throws(InterruptedException::class, NoResponseException::class, XMPPErrorException::class)
+    @Throws(Exception::class)
     private fun getNextStanzaSkipContinues(
         collector: StanzaCollector, replyTimeout: Long, connection: XMPPTCPConnection
     ): Stanza {
