@@ -5,6 +5,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -78,11 +79,12 @@ class PowerOffTaskTest {
                 parser.processPresence(writer)
                 parser.consumeIq("get") { id ->
                     parser.consumeTag("oa", "connect.logitech.com") {
-                        val contentMap: Map<String, String> =
-                            parser.consumeTextContent()
-                                .split(':')
-                                .map { Pair(it.substringBefore('='), it.substringAfter('=')) }
-                                .toMap()
+                        assertEquals(
+                            "vnd.logitech.connect/vnd.logitech.pair",
+                            parser.getAttribute("mime")
+                        )
+
+                        val contentMap = parser.consumeTextContentAsMap()
                         assertEquals("pair", contentMap["method"])
                         assertEquals("iOS6.0.1#iPhone", contentMap["name"]?.substringAfter('#'))
 
@@ -104,6 +106,7 @@ class PowerOffTaskTest {
     private fun runMain(socket: FakeSocket) {
         val parser = XmppTestParser(socket.output.inputStream, Charsets.UTF_8)
         val writer = XmppTestWriter(socket.input.outputStream, Charsets.ISO_8859_1)
+
         parser.consumeStream(close = false) { // The outer stream tag is never actually closed
             writer.openStreamWithPlainAuth()
             parser.processAuth(writer) {
@@ -121,7 +124,15 @@ class PowerOffTaskTest {
                 parser.processPresence(writer)
                 parser.consumeIq("get") { id ->
                     parser.consumeTag("oa", "connect.logitech.com") {
-                        // TODO: check OA power off command
+                        assertEquals(
+                            "vnd.logitech.harmony/vnd.logitech.harmony.engine?startactivity",
+                            parser.getAttribute("mime")
+                        )
+
+                        val contentMap = parser.consumeTextContentAsMap()
+                        assertEquals("-1", contentMap["activityId"])
+                        assertTrue(contentMap.containsKey("timestamp"))
+
                         writer.send(
                             """<iq id="$id" to="client@1111/main" type="get">
                 <oa errorcode='200'

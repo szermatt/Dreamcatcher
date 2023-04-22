@@ -145,6 +145,19 @@ class XmppTestParser(inputStream: InputStream, charset: Charset) {
             parser.next()
         }
     }
+
+    /** Parses as a Map text content whose format looks like "key=val:key=val:...". */
+    fun consumeTextContentAsMap(): Map<String, String> {
+        return consumeTextContent()
+            .split(':')
+            .map { Pair(it.substringBefore('='), it.substringAfter('=')) }
+            .toMap()
+    }
+
+    /** Returns an attribute of the current tag. */
+    fun getAttribute(name: String): String {
+        return parser.getAttributeValue("", name)
+    }
 }
 
 /** A helper for writing XMPP output streamss. */
