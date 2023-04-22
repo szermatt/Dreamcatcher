@@ -63,7 +63,13 @@ class PowerOffTaskTest {
 
         parser.consumeStream(close = false) { // The outer stream tag is never actually closed
             writer.openStreamWithPlainAuth()
-            parser.processAuth(writer)
+            parser.processAuth(writer) {
+                assertEquals(
+                    "\u0000guest@connect.logitech.com/gatorade" // user
+                            + "\u0000gatorade.", // password
+                    String(Base64.decode(parser.consumeTextContent(), Base64.DEFAULT))
+                )
+            }
             parser.consumeStream(close = true) {
                 writer.openStreamWithSession()
                 parser.processBind(writer, "auth")
