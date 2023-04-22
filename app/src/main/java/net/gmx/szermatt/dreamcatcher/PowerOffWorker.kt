@@ -16,12 +16,12 @@ class PowerOffWorker(
     private val task = PowerOffTask()
     override fun doWork(): Result {
         return try {
-            Log.i(TAG, "PowerOffWorker launched")
+            Log.d(TAG, "PowerOffWorker launched")
             task.run()
-            Log.i(TAG, "PowerOffWorker succeeded")
+            Log.d(TAG, "PowerOffWorker succeeded")
             Result.success()
         } catch (e: CancellationException) {
-            Log.d(TAG, "PowerOffWorker stopped", e)
+            Log.d(TAG, "PowerOffWorker finished after being stopped", e)
             Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "PowerOffWorker failed", e)

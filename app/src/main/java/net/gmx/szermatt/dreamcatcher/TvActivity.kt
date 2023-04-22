@@ -6,8 +6,11 @@ import android.util.Log
 import android.view.View
 import android.widget.ImageButton
 import android.widget.Toast
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
-import net.gmx.szermatt.dreamcatcher.harmony.PowerOffTask
 
 /**
  * A placeholder activity for the application; its main functionality is in the service.
@@ -16,23 +19,29 @@ class TvActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        val inBackground = DreamCatcherApplication.inBackground(this)
-        val onMain = DreamCatcherApplication.onMain(this)
         val button = findViewById<ImageButton>(R.id.power_off)
         button.setOnClickListener { _: View? ->
             Toast.makeText(this, "Power Off Requested", Toast.LENGTH_LONG).show()
-            inBackground.execute {
-                try {
-                    Log.i(TAG, "Powering off...")
-                    PowerOffTask().run()
-                    Log.i(TAG, "Powered off")
-                } catch (e: Exception) {
-                    Log.e(TAG, "Power Off Failed", e)
-                    onMain.post {
+            val op = WorkManager.getInstance(this).enqueue(
+                OneTimeWorkRequest.Builder(PowerOffWorker::class.java)
+                    .setConstraints(
+                        Constraints.Builder()
+                            .setRequiredNetworkType(NetworkType.CONNECTED)
+                            .build()
+                    )
+                    .build()
+            )
+            val result = op.result
+            result.addListener(
+                {
+                    try {
+                        result.get()
+                    } catch (e: Exception) {
                         Toast.makeText(this, "Power Off Failed", Toast.LENGTH_LONG).show()
                     }
-                }
-            }
+                },
+                mainExecutor,
+            )
         }
     }
 
