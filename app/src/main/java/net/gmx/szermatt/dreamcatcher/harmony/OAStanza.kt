@@ -210,12 +210,10 @@ internal class OAReplyProvider : IQProvider<IQ?>() {
             )
         }
         val contents = StringBuilder()
-        var done = false
-        while (!done) {
+        while (true) {
             when (parser.next()) {
                 XmlPullParser.END_TAG -> {
                     if (parser.name == elementName) {
-                        done = true
                         break
                     }
                     contents.append(parser.text)
