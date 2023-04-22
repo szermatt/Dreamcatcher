@@ -110,14 +110,13 @@ internal abstract class OAReplyParser {
                     continue
                     // throw new AuthFailedException(format("failed to parse element in auth response: %s", pair));
                 }
-                var valueObj: Any
+                val key = matcher.group(1)!!
                 val value = matcher.group(2)
-                valueObj = if (value?.startsWith("{") == true) {
+                params[key] = if (value?.startsWith("{") == true) {
                     parsePseudoJson(value)
                 } else {
                     value
                 }
-                params[matcher.group(1)!!] = valueObj
             }
             return params
         }

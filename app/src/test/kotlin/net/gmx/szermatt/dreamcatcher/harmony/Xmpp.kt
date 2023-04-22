@@ -15,8 +15,9 @@ class XmppTestParser(inputStream: InputStream, charset: Charset) {
     private val parser = PacketParserUtils.newXmppParser(reader)
 
     /** Expects an auth tag and answers it successfully, no matter what it contains. */
-    fun processAuth(writer: XmppTestWriter) =
+    fun processAuth(writer: XmppTestWriter, lambda: (() -> Unit)? = null) =
         consumeTag("auth", "urn:ietf:params:xml:ns:xmpp-sasl") {
+            if (lambda != null) lambda()
             writer.send("<success xmlns='urn:ietf:params:xml:ns:xmpp-sasl'/>")
         }
 

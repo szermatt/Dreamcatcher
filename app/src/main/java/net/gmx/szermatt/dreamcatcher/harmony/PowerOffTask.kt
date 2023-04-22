@@ -60,7 +60,7 @@ class PowerOffTask(
             .build()
         val authReply = obtainSessionToken(config)
             ?: throw HarmonyProtocolException("Session authentication failed")
-        powerOff(config, authReply.username, authReply.password)
+        powerOff(config, authReply.username, authReply.identity)
     }
 
     /** Obtain a session token to login to the harmony hub. */

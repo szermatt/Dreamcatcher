@@ -30,7 +30,7 @@ class PairRequest : OAStanza(HarmonyMimeTypes.PAIR) {
 class PairReply @JsonCreator constructor() : OAStanza(HarmonyMimeTypes.PAIR) {
     val serverIdentity: String? = null
     val hubId: String? = null
-    val password: String? = null
+    val identity: String? = null
     val status: String? = null
     val protocolVersion: Map<String, String>? = null
     val hubProfiles: Map<String, String>? = null
@@ -42,7 +42,7 @@ class PairReply @JsonCreator constructor() : OAStanza(HarmonyMimeTypes.PAIR) {
             val b = ImmutableMap.builder<String, Any?>()
             if (serverIdentity != null) b.put("serverIdentity", serverIdentity)
             if (hubId != null) b.put("hubId", hubId)
-            if (password != null) b.put("identity", password)
+            if (identity != null) b.put("identity", identity)
             if (status != null) b.put("status", status)
             if (protocolVersion != null) b.put("protocolVersion", protocolVersion)
             if (hubProfiles != null) b.put("hubProfiles", hubProfiles)
@@ -51,7 +51,7 @@ class PairReply @JsonCreator constructor() : OAStanza(HarmonyMimeTypes.PAIR) {
             return b.build()
         }
     val username: String
-        get() = String.format("%s@connect.logitech.com/gatorade", password)
+        get() = String.format("%s@connect.logitech.com/gatorade", identity)
 
     /** Parser for these replies. */
     internal class Parser : OAReplyParser() {

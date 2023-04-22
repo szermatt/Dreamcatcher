@@ -1,5 +1,6 @@
 package net.gmx.szermatt.dreamcatcher.harmony
 
+import android.util.Base64
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -15,6 +16,16 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 class PowerOffTaskTest {
+
+    companion object {
+        /** Test session token, returned as "identity" in the OA pair stanza. */
+        val SESSION_TOKEN = "ed23c162a01b9ef7b2729c553eb8d7c0f841f7a3"
+
+        // Fields for socketImplSetup()
+        val classLock = Any() // protects fields below
+        val sockets = ArrayBlockingQueue<FakeSocket>(10)
+        var socketImplSetup = false
+    }
 
     @Test
     fun run() {
@@ -72,7 +83,7 @@ class PowerOffTaskTest {
                         writer.send(
                             """<iq id="$id" to="client@1111/auth" type="get"> 
                                 <oa errorcode='200' errorstring='OK' mime='vnd.logitech.connect/vnd.logitech.pair' xmlns='connect.logitech.com'>
-                                    <![CDATA[serverIdentity=ed23c162a01b9ef7b2729c553eb8d7c0f841f7a3:hubId=106:identity=ed23c162a01b9ef7b2729c553eb8d7c0f841f7a3:status=succeeded:protocolVersion={XMPP="1.0", HTTP="1.0", RF="1.0", WEBSOCKET="1.0"}:hubProfiles={Harmony="2.0"}:productId=Pimento:friendlyName=ia]]>                            
+                                    <![CDATA[serverIdentity=ed23c162a01b9ef7b2729c553eb8d7c0f841f7a3:hubId=106:identity=${SESSION_TOKEN}:status=succeeded:protocolVersion={XMPP="1.0", HTTP="1.0", RF="1.0", WEBSOCKET="1.0"}:hubProfiles={Harmony="2.0"}:productId=Pimento:friendlyName=ia]]>                            
                                 </oa>
                             </iq>"""
                         )
@@ -89,7 +100,13 @@ class PowerOffTaskTest {
         val writer = XmppTestWriter(socket.input.outputStream, Charsets.ISO_8859_1)
         parser.consumeStream(close = false) { // The outer stream tag is never actually closed
             writer.openStreamWithPlainAuth()
-            parser.processAuth(writer) // TODO: check auth credentials
+            parser.processAuth(writer) {
+                assertEquals(
+                    "\u0000${SESSION_TOKEN}@connect.logitech.com/gatorade" // user
+                            + "\u0000${SESSION_TOKEN}", // password
+                    String(Base64.decode(parser.consumeTextContent(), Base64.DEFAULT))
+                )
+            }
             parser.consumeStream(close = true) {
                 writer.openStreamWithSession()
                 parser.processBind(writer, "main")
@@ -139,11 +156,5 @@ class PowerOffTaskTest {
             }
             socketImplSetup = true
         }
-    }
-
-    companion object {
-        val classLock = Any() // protects fields below
-        val sockets = ArrayBlockingQueue<FakeSocket>(10)
-        var socketImplSetup = false
     }
 }
