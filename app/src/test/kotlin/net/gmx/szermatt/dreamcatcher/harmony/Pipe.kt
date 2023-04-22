@@ -129,7 +129,7 @@ class Pipe {
         }
 
         override fun write(arr: ByteArray?, off: Int, len: Int) {
-            if (len == 0 || arr == null) return;
+            if (len == 0 || arr == null) return
 
             if (dump) {
                 println("--- %s START ---".format(dumpHeader))
@@ -148,7 +148,7 @@ class Pipe {
         override fun close() {
             lock.withLock {
                 if (closed) return
-                closed = true;
+                closed = true
                 blockCondition.signalAll()
             }
         }

@@ -15,7 +15,7 @@ fun initFakeSockets(next: () -> FakeSocket) {
 }
 
 /** A fake socket backed by an input and output pipe. */
-class FakeSocket() {
+class FakeSocket {
     /**
      * The pipe that represents this socket input.
      *
