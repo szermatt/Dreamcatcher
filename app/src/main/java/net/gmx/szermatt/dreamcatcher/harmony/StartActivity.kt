@@ -1,20 +1,17 @@
 package net.gmx.szermatt.dreamcatcher.harmony
 
-import com.google.common.collect.ImmutableMap
-import org.jivesoftware.smack.packet.IQ
-
 /** Start Activity Request */
-class StartActivityRequest(private val activityId: Int) :
+internal class StartActivityRequest(private val activityId: Int) :
     OAStanza(HarmonyMimeTypes.START_ACTIVITY) {
     override val childElementPairs: Map<String, Any?>
-        get() = ImmutableMap.builder<String, Any?>()
-            .put("activityId", activityId)
-            .put("timestamp", generateTimestamp())
-            .build()
+        get() = mapOf(
+            "activityId" to activityId,
+            "timestamp" to generateTimestamp()
+        )
 }
 
-/** Start Activity Reply (unused) */
-class StartActivityReply : OAStanza(HarmonyMimeTypes.START_ACTIVITY) {
+/** Start Activity Reply (empty). */
+internal class StartActivityReply : OAStanza(HarmonyMimeTypes.START_ACTIVITY) {
     override val childElementPairs: Map<String, Any?>
         get() = mapOf()
 
@@ -24,9 +21,7 @@ class StartActivityReply : OAStanza(HarmonyMimeTypes.START_ACTIVITY) {
             statusCode: String?,
             errorString: String?,
             contents: String
-        ): IQ {
-            return StartActivityReply()
-        }
+        ) = StartActivityReply()
 
         override fun validResponseCode(code: String?): Boolean {
             //sometimes the start activity will return a 401 if a device is not setup correctly

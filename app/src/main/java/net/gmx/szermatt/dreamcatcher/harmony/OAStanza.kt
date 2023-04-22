@@ -25,7 +25,7 @@ internal class HarmonyMimeTypes {
 }
 
 /** The XMPP stanza used to send harmony-specific commands. */
-abstract class OAStanza(protected val mimeType: String?) :
+abstract internal class OAStanza(protected val mimeType: String?) :
     IQ(object : SimpleIQ("oa", "connect.logitech.com") {}) {
     var statusCode: String? = null
     var errorString: String? = null
@@ -124,18 +124,11 @@ internal class OAReplyProvider : IQProvider<IQ?>() {
         val mimeType = parser.getAttributeValue(null, "mime")
         val replyParser = REPLY_PARSERS[mimeType]
             ?: throw HarmonyProtocolException(
-                String.format(
-                    "Unable to handle reply type '%s'",
-                    mimeType
-                )
+                "Unable to handle reply type '$mimeType'"
             )
         if (!replyParser.validResponseCode(statusCode)) {
             throw HarmonyProtocolException(
-                String.format(
-                    "Got error response [%s]: %s",
-                    statusCode,
-                    attrs["errorstring"]
-                )
+                "Got error response [$statusCode]: ${attrs["errorstring"]}"
             )
         }
         val contents = StringBuilder()
@@ -193,23 +186,6 @@ internal class OAReplyFilter(request: OAStanza, connection: XMPPConnection) : St
     }
 
     override fun accept(stanza: Stanza): Boolean {
-        // First filter out everything that is not an IQ stanza and does not have the correct ID set.
-        if (!iqAndIdFilter.accept(stanza)) {
-            return false
-        }
-
-        // Second, check if the from attributes are correct and log potential IQ spoofing attempts
-        return if (fromFilter.accept(stanza)) {
-            true
-        } else {
-            println(
-                String.format(
-                    "Rejected potentially spoofed reply to IQ-stanza. Filter settings: "
-                            + "stanzaId=%s, to=%s, local=%s, server=%s. Received stanza with from=%s",
-                    stanzaId, to, local, server, stanza.from
-                )
-            )
-            false
-        }
+        return iqAndIdFilter.accept(stanza) && fromFilter.accept(stanza)
     }
 }
