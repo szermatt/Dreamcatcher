@@ -38,7 +38,7 @@ class PowerOffTaskTest {
         mainSocket.dumpAs("main", Charsets.UTF_8)
         sockets.add(mainSocket)
 
-        val task = PowerOffTask("127.0.0.1")
+        val task = PowerOffTask("127.0.0.1", 5222)
 
         val threadPool = Executors.newCachedThreadPool()
         try {
@@ -49,7 +49,8 @@ class PowerOffTaskTest {
                 runAuth(authSocket)
                 runMain(mainSocket)
 
-                // TODO: check addresses
+                assertEquals("/127.0.0.1:5222", authSocket.connectedTo.toString())
+                assertEquals("/127.0.0.1:5222", mainSocket.connectedTo.toString())
             }
         } finally {
             threadPool.shutdown()
