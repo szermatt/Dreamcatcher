@@ -11,7 +11,6 @@ import org.jivesoftware.smack.packet.XMPPError
 import org.jivesoftware.smack.provider.IQProvider
 import org.jxmpp.jid.Jid
 import org.xmlpull.v1.XmlPullParser
-import java.util.regex.Pattern
 
 /** Mime types of the different OA stanzas supported by [OAReplyProvider]. */
 internal class HarmonyMimeTypes {
@@ -76,19 +75,16 @@ abstract class OAStanza(protected val mimeType: String?) :
 internal abstract class OAReplyParser {
     abstract fun parseReplyContents(statusCode: String?, errorString: String?, contents: String): IQ
     open fun validResponseCode(code: String?): Boolean {
-        return validResponses.contains(code)
+        return VALID_RESPONSES.contains(code)
     }
 
     companion object {
-        private val kvRE: Pattern = Pattern.compile("(.*?)=(.*)")
-        var validResponses: MutableSet<String?> = HashSet()
-
-        init {
-            validResponses.add("100")
-            validResponses.add("200")
-            validResponses.add("506") // Bluetooth not connected
-            validResponses.add("566") // Command not found for device, recoverable
-        }
+        private val VALID_RESPONSES = setOf(
+            "100",
+            "200",
+            "506", // Bluetooth not connected
+            "566", // Command not found for device, recoverable
+        )
 
         @JvmStatic
         protected fun parseKeyValuePairs(
@@ -105,14 +101,9 @@ internal abstract class OAReplyParser {
             }
             for (pair in contents.split(":".toRegex()).dropLastWhile { it.isEmpty() }
                 .toTypedArray()) {
-                val matcher = kvRE.matcher(pair)
-                if (!matcher.matches()) {
-                    continue
-                    // throw new AuthFailedException(format("failed to parse element in auth response: %s", pair));
-                }
-                val key = matcher.group(1)!!
-                val value = matcher.group(2)
-                params[key] = if (value?.startsWith("{") == true) {
+                val key = pair.substringBefore('=')
+                val value = pair.substringAfter('=')
+                params[key] = if (value.startsWith("{")) {
                     parsePseudoJson(value)
                 } else {
                     value
@@ -127,16 +118,8 @@ internal abstract class OAReplyParser {
             val value = v.substring(1, v.length - 1)
             for (pair in value.split(", ?".toRegex()).dropLastWhile { it.isEmpty() }
                 .toTypedArray()) {
-                val matcher = kvRE.matcher(pair)
-                if (!matcher.matches()) {
-                    throw AuthFailedException(
-                        String.format(
-                            "failed to parse element in auth response: %s",
-                            value
-                        )
-                    )
-                }
-                params[matcher.group(1)!!] = parsePseudoJsonValue(matcher.group(2)!!)
+                val key = pair.substringBefore('=')
+                params[key] = parsePseudoJsonValue(pair.substringAfter('='))
             }
             return params
         }
@@ -167,15 +150,11 @@ internal abstract class OAReplyParser {
 /** Parses replies from the OA stanza, based on their mime type. */
 internal class OAReplyProvider : IQProvider<IQ?>() {
     companion object {
-        private val replyParsers: MutableMap<String?, OAReplyParser> = HashMap()
-
-        init {
-            replyParsers[HarmonyMimeTypes.PAIR] = PairReply.Parser()
-            replyParsers[HarmonyMimeTypes.START_ACTIVITY] =
-                StartActivityReply.Parser()
-            replyParsers[HarmonyMimeTypes.START_ACTIVITY_SHORT] =
-                StartActivityReply.Parser()
-        }
+        private val REPLY_PARSERS: Map<String, OAReplyParser> = mapOf(
+            HarmonyMimeTypes.PAIR to PairReply.Parser(),
+            HarmonyMimeTypes.START_ACTIVITY to StartActivityReply.Parser(),
+            HarmonyMimeTypes.START_ACTIVITY_SHORT to StartActivityReply.Parser(),
+        )
     }
 
     @Throws(Exception::class)
@@ -193,7 +172,7 @@ internal class OAReplyProvider : IQProvider<IQ?>() {
         val statusCode = attrs["errorcode"]
         val errorString = attrs["errorstring"]
         val mimeType = parser.getAttributeValue(null, "mime")
-        val replyParser = replyParsers[mimeType]
+        val replyParser = REPLY_PARSERS[mimeType]
             ?: throw HarmonyProtocolException(
                 String.format(
                     "Unable to handle reply type '%s'",
