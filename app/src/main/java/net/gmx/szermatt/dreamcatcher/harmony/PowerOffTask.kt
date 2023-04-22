@@ -22,7 +22,8 @@ import java.util.concurrent.locks.ReentrantLock
 
 /** Sends a power off command to the Harmony hub.  */
 class PowerOffTask(
-    private val host: String = "192.168.1.116"
+    private val host: String = "192.168.1.116",
+    private val port: Int = 5222
 ) {
     /**
      * To prevent timeouts when different threads send a message and expect a response, create a lock that only allows a
@@ -54,13 +55,13 @@ class PowerOffTask(
         init()
         val config = XMPPTCPConnectionConfiguration.builder()
             .setHostAddress(InetAddress.getByName(host))
-            .setPort(DEFAULT_PORT)
+            .setPort(port)
             .setXmppDomain("harmonyhub")
             .addEnabledSaslMechanism(SASLMechanism.PLAIN)
             .build()
-        val authReply = obtainSessionToken(config)
+        val identity = obtainSessionToken(config)?.identity
             ?: throw HarmonyProtocolException("Session authentication failed")
-        powerOff(config, authReply.username, authReply.identity)
+        powerOff(config, identity)
     }
 
     /** Obtain a session token to login to the harmony hub. */
@@ -78,8 +79,8 @@ class PowerOffTask(
             connection.connect()
             cancelIfStopped()
             connection.login(
-                DEFAULT_XMPP_USER,
-                DEFAULT_XMPP_PASSWORD,
+                "${XMPP_USER_NAME}@${XMPP_USER_DOMAIN}",
+                XMPP_USER_PASSWORD,
                 Resourcepart.from("auth")
             )
             cancelIfStopped()
@@ -109,15 +110,18 @@ class PowerOffTask(
     )
     private fun powerOff(
         config: XMPPTCPConnectionConfiguration,
-        userName: String?,
-        password: String?
+        identity: String,
     ) {
         val connection: XMPPTCPConnection = HarmonyXMPPTCPConnection(config)
         try {
             cancelIfStopped()
             connection.connect()
             cancelIfStopped()
-            connection.login(userName, password, Resourcepart.from("main"))
+            connection.login(
+                "${identity}@${XMPP_USER_DOMAIN}",
+                identity,
+                Resourcepart.from("main")
+            )
             cancelIfStopped()
             connection.fromMode = XMPPConnection.FromMode.USER
             sendOAStanza(
@@ -178,9 +182,9 @@ class PowerOffTask(
     companion object {
         const val DEFAULT_REPLY_TIMEOUT = 5000
         const val START_ACTIVITY_REPLY_TIMEOUT = 30000
-        private const val DEFAULT_PORT = 5222
-        private const val DEFAULT_XMPP_USER = "guest@connect.logitech.com/gatorade."
-        private const val DEFAULT_XMPP_PASSWORD = "gatorade."
+        private const val XMPP_USER_NAME = "guest"
+        private const val XMPP_USER_DOMAIN = "connect.logitech.com/gatorade"
+        private const val XMPP_USER_PASSWORD = "gatorade."
 
         /**
          * True once smack has been initialized in the current VM.

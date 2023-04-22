@@ -50,8 +50,6 @@ class PairReply @JsonCreator constructor() : OAStanza(HarmonyMimeTypes.PAIR) {
             if (friendlyName != null) b.put("friendlyName", friendlyName)
             return b.build()
         }
-    val username: String
-        get() = String.format("%s@connect.logitech.com/gatorade", identity)
 
     /** Parser for these replies. */
     internal class Parser : OAReplyParser() {
