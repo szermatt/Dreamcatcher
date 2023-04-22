@@ -9,7 +9,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.xmlpull.v1.XmlPullParser
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -145,21 +144,6 @@ class PowerOffTaskTest {
             }
         }
         writer.close()
-    }
-
-    private fun skipToEndTag(parser: XmlPullParser) {
-        var depth = 0
-        while (true) {
-            when (parser.next()) {
-                XmlPullParser.START_TAG -> depth++
-                XmlPullParser.END_TAG -> {
-                    if (depth == 0) return
-                    depth--
-                }
-                XmlPullParser.END_DOCUMENT ->
-                    throw IllegalStateException("unexpected END_DOCUMENT")
-            }
-        }
     }
 
     private fun initSocketImpl() {
