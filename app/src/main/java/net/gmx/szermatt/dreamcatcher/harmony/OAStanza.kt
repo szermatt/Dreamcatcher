@@ -16,7 +16,7 @@ import java.util.regex.Pattern
 /** Mime types of the different OA stanzas supported by [OAReplyProvider]. */
 internal class HarmonyMimeTypes {
     companion object {
-        /** Mime type for obtaining a session token, see [SessionTokenRequest]. */
+        /** Mime type for obtaining a session token, see [PairRequest]. */
         val PAIR = "vnd.logitech.connect/vnd.logitech.pair"
 
         /** Mime type for starting an activity, see [StartActivityRequest]. */
@@ -171,7 +171,7 @@ internal class OAReplyProvider : IQProvider<IQ?>() {
         private val replyParsers: MutableMap<String?, OAReplyParser> = HashMap()
 
         init {
-            replyParsers[HarmonyMimeTypes.PAIR] = SessionTokenReply.Parser()
+            replyParsers[HarmonyMimeTypes.PAIR] = PairReply.Parser()
             replyParsers[HarmonyMimeTypes.START_ACTIVITY] =
                 StartActivityReply.Parser()
             replyParsers[HarmonyMimeTypes.START_ACTIVITY_SHORT] =

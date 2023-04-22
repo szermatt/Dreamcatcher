@@ -71,7 +71,7 @@ class PowerOffTask(
         InterruptedException::class,
         CancellationException::class
     )
-    private fun obtainSessionToken(config: XMPPTCPConnectionConfiguration): SessionTokenReply? {
+    private fun obtainSessionToken(config: XMPPTCPConnectionConfiguration): PairReply? {
         val connection: XMPPTCPConnection = HarmonyXMPPTCPConnection(config)
         return try {
             cancelIfStopped()
@@ -86,8 +86,8 @@ class PowerOffTask(
             connection.fromMode = XMPPConnection.FromMode.USER
             sendOAStanza(
                 connection,
-                SessionTokenRequest(),
-                SessionTokenReply::class.java,
+                PairRequest(),
+                PairReply::class.java,
                 DEFAULT_REPLY_TIMEOUT.toLong()
             )
         } finally {

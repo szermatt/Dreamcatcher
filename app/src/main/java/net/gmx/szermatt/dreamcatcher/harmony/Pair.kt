@@ -7,7 +7,7 @@ import org.jivesoftware.smack.packet.IQ
 import java.util.*
 
 /** Request for obtaining the session token. */
-class SessionTokenRequest : OAStanza(HarmonyMimeTypes.PAIR) {
+class PairRequest : OAStanza(HarmonyMimeTypes.PAIR) {
     init {
         type = Type.get
     }
@@ -27,7 +27,7 @@ class SessionTokenRequest : OAStanza(HarmonyMimeTypes.PAIR) {
 }
 
 /** Reply containing the session token. */
-class SessionTokenReply @JsonCreator constructor() : OAStanza(HarmonyMimeTypes.PAIR) {
+class PairReply @JsonCreator constructor() : OAStanza(HarmonyMimeTypes.PAIR) {
     val serverIdentity: String? = null
     val hubId: String? = null
     val password: String? = null
@@ -65,7 +65,7 @@ class SessionTokenReply @JsonCreator constructor() : OAStanza(HarmonyMimeTypes.P
                     statusCode,
                     errorString,
                     contents
-                ), SessionTokenReply::class.java
+                ), PairReply::class.java
             )
         }
     }
