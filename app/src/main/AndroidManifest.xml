@@ -22,9 +22,8 @@
         <service android:enabled="true" android:name="net.gmx.szermatt.dreamcatcher.DreamCatcherService" />
         <activity
             android:name="net.gmx.szermatt.dreamcatcher.TvActivity"
-            android:theme="@style/Theme.Leanback"
+            android:theme="@style/Theme.DreamCatcher"
             android:exported="true">
-
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
