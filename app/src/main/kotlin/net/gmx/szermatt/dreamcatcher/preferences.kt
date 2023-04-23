@@ -11,3 +11,4 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
         setPreferencesFromResource(R.xml.preference, rootKey)
     }
 }
+
