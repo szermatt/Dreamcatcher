@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-feature android:name="android.software.leanback" android:required="true" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <!-- TODO: add a real icon. This is actually displayed, sometimes. -->
     <application
         android:name="net.gmx.szermatt.dreamcatcher.DreamCatcherApplication"
         android:allowBackup="true"
