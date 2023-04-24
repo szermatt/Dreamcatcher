@@ -18,9 +18,16 @@ import java.util.concurrent.locks.ReentrantLock
 
 /** Sends a power off command to the Harmony hub.  */
 class PowerOffTask(
-    private val host: String = "192.168.1.116",
+    private val host: String,
     private val port: Int = 5222
 ) {
+    private val config = XMPPTCPConnectionConfiguration.builder()
+        .setHostAddress(InetAddress.getByName(host))
+        .setPort(port)
+        .setXmppDomain("harmonyhub")
+        .addEnabledSaslMechanism(SASLMechanism.PLAIN)
+        .build()
+
     /**
      * To prevent timeouts when different threads send a message and expect a response, create a lock that only allows a
      * single thread at a time to perform a send/receive action.
@@ -49,20 +56,24 @@ class PowerOffTask(
     @Throws(Exception::class)
     fun run() {
         init()
-        val config = XMPPTCPConnectionConfiguration.builder()
-            .setHostAddress(InetAddress.getByName(host))
-            .setPort(port)
-            .setXmppDomain("harmonyhub")
-            .addEnabledSaslMechanism(SASLMechanism.PLAIN)
-            .build()
-        val identity = obtainSessionToken(config)
+        val identity = obtainSessionToken()
             ?: throw HarmonyProtocolException("Session authentication failed")
-        powerOff(config, identity)
+        powerOff(identity)
+    }
+
+    /**
+     * Connects to the Harmony Hub
+     *
+     * @throws CancellationException if the task was stopped before it could be completed
+     */
+    fun dryRun() {
+        init()
+        obtainSessionToken()
     }
 
     /** Obtain a session token to login to the harmony hub. */
     @Throws(Exception::class)
-    private fun obtainSessionToken(config: XMPPTCPConnectionConfiguration): String? {
+    private fun obtainSessionToken(): String {
         val connection: XMPPTCPConnection = HarmonyXMPPTCPConnection(config)
         try {
             cancelIfStopped()
@@ -82,6 +93,7 @@ class PowerOffTask(
                 DEFAULT_REPLY_TIMEOUT.toLong()
             )
             return reply?.identity
+                ?: throw HarmonyProtocolException("Session authentication failed")
         } finally {
             if (connection.isConnected) {
                 connection.disconnect()
@@ -93,10 +105,7 @@ class PowerOffTask(
      * Connect with the given session token and send the power off command.
      */
     @Throws(Exception::class)
-    private fun powerOff(
-        config: XMPPTCPConnectionConfiguration,
-        sessionToken: String,
-    ) {
+    private fun powerOff(sessionToken: String) {
         val connection: XMPPTCPConnection = HarmonyXMPPTCPConnection(config)
         try {
             cancelIfStopped()

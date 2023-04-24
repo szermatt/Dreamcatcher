@@ -1,16 +1,17 @@
 <resources>
-    <string name="app_name">DreamCatcher</string>
+    <string name="app_name">Dreamcatcher</string>
     <string name="hello_world">Hello, world</string>
     <string name="preferences_title">Configure your dreamcatcher</string>
     <string name="preference_enabled">Enabled</string>
-    <string name="preference_enabled_summary">Send a power off command to the Harmony Hub a certain time after Day Dream started</string>
+    <string name="preference_enabled_summary">Send a power off command to %1$s %2$dm after Day Dream started</string>
     <string name="preference_delay">Day Dream duration</string>
-    <string name="preference_delay_summary">How long to wait after the start of Day Dream before sending a power off command to the Harmony Hub.</string>
+    <string name="preference_delay_summary">Let Day Dream run for %1$dm.</string>
     <string name="preference_hostport">Harmony Hub Address</string>
     <string name="preference_hostport_dialog_title">Host name or address of the Harmony Hub</string>
-    <string name="preference_hostport_summary">The internet address of the Harmony Hub XMPP service, with an optional port number.</string>
+    <string name="preference_hostport_summary">Connect to the Harmony XMPP service on %1$s</string>
     <string name="preference_test">Test Connection</string>
-    <string name="preference_test_summary">Try to connect to the Harmony Hub using the provided address, without actually sending any commands.</string>
+    <string name="preference_test_summary">Try to connect to %1$s, without actually sending any commands.</string>
     <string name="preference_poweroff">Power Off NOW</string>
-    <string name="preference_poweroff_summary">Send a power off command to the Harmony Hub.</string>
+    <string name="preference_poweroff_summary">Send a power off command to %1$s.</string>
+    <string name="harmony_hub">the Harmony Hub</string>
 </resources>

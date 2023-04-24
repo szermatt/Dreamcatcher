@@ -10,9 +10,9 @@ import android.content.IntentFilter
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.work.*
+import androidx.preference.PreferenceManager.getDefaultSharedPreferences
+import androidx.work.WorkManager
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
-import java.util.concurrent.TimeUnit
 
 
 /** Intent used to start the DreamCatcherService. */
@@ -34,17 +34,11 @@ class DreamCatcherService : Service() {
 
     private val mDreamingStarted: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            Log.d(TAG, "Dreaming started")
+            val prefs = getDefaultSharedPreferences(context)
+            val delayInMinutes = prefs.getInt("delay", 10)
+            Log.d(TAG, "Dreaming started, power off in ${delayInMinutes}m")
             WorkManager.getInstance(context).enqueue(
-                OneTimeWorkRequest.Builder(PowerOffWorker::class.java)
-                    .setConstraints(
-                        Constraints.Builder()
-                            .setRequiredNetworkType(NetworkType.CONNECTED)
-                            .build()
-                    )
-                    .setInitialDelay(10, TimeUnit.MINUTES)
-                    .addTag(WORKER_TAG)
-                    .build()
+                PowerOffWorker.workRequest(delayInMinutes = delayInMinutes)
             )
         }
     }

@@ -2,22 +2,51 @@ package net.gmx.szermatt.dreamcatcher
 
 import android.content.Context
 import android.util.Log
-import androidx.work.Worker
-import androidx.work.WorkerParameters
+import androidx.preference.PreferenceManager.getDefaultSharedPreferences
+import androidx.work.*
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffTask
 import java.util.concurrent.CancellationException
+import java.util.concurrent.TimeUnit
 
 /** Wraps a [PowerOffTask] into a Worker.  */
 class PowerOffWorker(
     context: Context,
     params: WorkerParameters
 ) : Worker(context, params) {
-    private val task = PowerOffTask()
+
+    companion object {
+        /** Creates a one-time [WorkRequest] for this worker. */
+        fun workRequest(delayInMinutes: Int = 0, dryRun: Boolean = false): WorkRequest {
+            val b = OneTimeWorkRequest.Builder(PowerOffWorker::class.java)
+                .setConstraints(
+                    Constraints.Builder()
+                        .setRequiredNetworkType(NetworkType.CONNECTED)
+                        .build()
+                )
+            if (delayInMinutes > 0) {
+                b.setInitialDelay(delayInMinutes.toLong(), TimeUnit.MINUTES)
+            }
+            val data = Data.Builder()
+            data.putBoolean("dryRun", dryRun)
+            b.setInputData(data.build())
+            return b.build()
+        }
+    }
+
+    private val task = PowerOffTask(
+        getDefaultSharedPreferences(context).getString("hostport", "192.168.1.116")!!
+    )
+
     override fun doWork(): Result {
         return try {
-            Log.d(TAG, "PowerOffWorker launched")
-            task.run()
+            val dryRun = inputData.getBoolean("dryRun", false)
+            Log.d(TAG, "PowerOffWorker launched dryRun=$dryRun ")
+            if (dryRun) {
+                task.dryRun()
+            } else {
+                task.run()
+            }
             Log.d(TAG, "PowerOffWorker succeeded")
             Result.success()
         } catch (e: CancellationException) {
