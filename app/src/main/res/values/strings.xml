@@ -14,4 +14,6 @@
     <string name="preference_poweroff">Power Off NOW</string>
     <string name="preference_poweroff_summary">Send a power off command to %1$s.</string>
     <string name="harmony_hub">the Harmony Hub</string>
+    <string name="preference_test_ok_summary">Connection to %1$s OK</string>
+    <string name="preference_test_fail_summary">Connection to %1$s FAILED. Make sure that address is correct and that XMPP is enabled on the Harmony Hub.</string>
 </resources>

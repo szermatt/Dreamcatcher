@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.widget.Toast
+import androidx.annotation.IntDef
 import androidx.leanback.app.ProgressBarManager
 import androidx.leanback.preference.LeanbackPreferenceFragment
 import androidx.preference.Preference
@@ -11,6 +12,17 @@ import androidx.work.WorkManager
 
 
 class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
+    companion object {
+
+        @IntDef(TEST_RESULT_UNKNOWN, TEST_RESULT_OK, TEST_RESULT_FAIL)
+        @Retention(AnnotationRetention.SOURCE)
+        annotation class TestResult
+
+        const val TEST_RESULT_UNKNOWN = 0
+        const val TEST_RESULT_OK = 1
+        const val TEST_RESULT_FAIL = 2
+    }
+
     val mProgressManager = ProgressBarManager()
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -34,9 +46,24 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
         hostport.setSummaryProvider {
             getString(R.string.preference_hostport_summary, getHostportOrDefault(prefs, context))
         }
+        hostport.setOnPreferenceChangeListener { _, newValue ->
+            if (newValue != prefs.getString("hostport", "")) {
+                // Changing the address invalidates the test result.
+                with(prefs.edit()) {
+                    putInt("test", TEST_RESULT_UNKNOWN)
+                    commit()
+                }
+            }
+            true
+        }
         val test: Preference = preferenceManager.findPreference("test")!!
         test.setSummaryProvider {
-            getString(R.string.preference_test_summary, getHostportOrDefault(prefs, context))
+            val id = when (prefs.getInt("test", TEST_RESULT_UNKNOWN)) {
+                TEST_RESULT_OK -> R.string.preference_test_ok_summary
+                TEST_RESULT_FAIL -> R.string.preference_test_fail_summary
+                else -> R.string.preference_test_summary
+            }
+            getString(id, getHostportOrDefault(prefs, context))
         }
         test.setOnPreferenceClickListener {
             Toast.makeText(context, "Testing connection...", Toast.LENGTH_LONG).show()
@@ -47,11 +74,22 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
             val result = op.result
             result.addListener({
                 mProgressManager.disableProgressBar()
-                // TODO: have the preference show the result (success, failure, unknown)
+                with(prefs.edit()) {
+                    putInt("test", TEST_RESULT_UNKNOWN)
+                    commit()
+                }
                 try {
                     result.get()
+                    with(prefs.edit()) {
+                        putInt("test", TEST_RESULT_OK)
+                        commit()
+                    }
                     Toast.makeText(context, "Connection OK", Toast.LENGTH_LONG).show()
                 } catch (e: Exception) {
+                    with(prefs.edit()) {
+                        putInt("test", TEST_RESULT_FAIL)
+                        commit()
+                    }
                     Toast.makeText(context, "Connection failed!", Toast.LENGTH_LONG).show()
                 }
             }, context.mainExecutor)
