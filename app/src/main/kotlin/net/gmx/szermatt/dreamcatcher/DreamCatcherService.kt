@@ -79,13 +79,13 @@ class DreamCatcherService : Service() {
                     if (!prefs.enabled) return;
 
                     val delayInMinutes = prefs.delay
-                    val hostport = prefs.hostport
+                    val address = prefs.address
                     Log.d(
                         TAG,
-                        "Dreaming started, send power off to ${hostport} in ${delayInMinutes}m"
+                        "Dreaming started, send power off to ${address} in ${delayInMinutes}m"
                     )
                     WorkManager.getInstance(context).enqueue(
-                        PowerOffWorker.workRequest(hostport, delayInMinutes = delayInMinutes)
+                        PowerOffWorker.workRequest(address, delayInMinutes = delayInMinutes)
                     )
                 }
             }

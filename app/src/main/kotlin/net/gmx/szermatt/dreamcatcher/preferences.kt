@@ -28,7 +28,7 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
             val context = it.context
             val prefs = DreamCatcherPreferenceManager(context)
             context.getString(
-                R.string.preference_enabled_summary, prefs.getHostportForDisplay(), prefs.delay
+                R.string.preference_enabled_summary, prefs.getAddressForDisplay(), prefs.delay
             )
         }
         val delay: Preference =
@@ -38,16 +38,16 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
             val prefs = DreamCatcherPreferenceManager(context)
             context.getString(R.string.preference_delay_summary, prefs.delay)
         }
-        val hostport: Preference =
+        val address: Preference =
             preferenceManager.findPreference(DreamCatcherPreferenceManager.HOSTPORT_KEY)!!
-        hostport.setSummaryProvider {
+        address.setSummaryProvider {
             val context = it.context
             val prefs = DreamCatcherPreferenceManager(context)
-            context.getString(R.string.preference_hostport_summary, prefs.getHostportForDisplay())
+            context.getString(R.string.preference_address_summary, prefs.getAddressForDisplay())
         }
-        hostport.setOnPreferenceChangeListener { p, newValue ->
+        address.setOnPreferenceChangeListener { p, newValue ->
             val prefs = DreamCatcherPreferenceManager(p.context)
-            if (newValue != prefs.hostport) {
+            if (newValue != prefs.address) {
                 // Changing the address invalidates the test result.
                 prefs.test = TEST_RESULT_UNKNOWN
             }
@@ -62,7 +62,7 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
                 TEST_RESULT_FAIL -> R.string.preference_test_fail_summary
                 else -> R.string.preference_test_summary
             }
-            context.getString(id, prefs.getHostportForDisplay())
+            context.getString(id, prefs.getAddressForDisplay())
         }
         test.setOnPreferenceClickListener {
             val context = it.context
@@ -71,7 +71,7 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
             Toast.makeText(context, "Testing connection...", Toast.LENGTH_LONG).show()
             prefs.test = TEST_RESULT_UNKNOWN
             val op = WorkManager.getInstance(context).enqueue(
-                PowerOffWorker.workRequest(prefs.hostport, dryRun = true)
+                PowerOffWorker.workRequest(prefs.address, dryRun = true)
             )
             op.result.addListener(object : OperationListener(op) {
                 override fun onSuccess() {
@@ -90,7 +90,7 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
         powerOff.setSummaryProvider {
             val context = it.context
             val prefs = DreamCatcherPreferenceManager(context)
-            context.getString(R.string.preference_poweroff_summary, prefs.getHostportForDisplay())
+            context.getString(R.string.preference_poweroff_summary, prefs.getAddressForDisplay())
         }
         powerOff.setOnPreferenceClickListener {
             val context = it.context
@@ -98,7 +98,7 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
 
             Toast.makeText(context, "Powering off...", Toast.LENGTH_LONG).show()
             val op =
-                WorkManager.getInstance(context).enqueue(PowerOffWorker.workRequest(prefs.hostport))
+                WorkManager.getInstance(context).enqueue(PowerOffWorker.workRequest(prefs.address))
             op.result.addListener(object : OperationListener(op) {
                 override fun onSuccess() {
                     prefs.test = TEST_RESULT_OK
@@ -119,7 +119,7 @@ internal class DreamCatcherPreferenceManager(private val context: Context) {
         const val DELAY_KEY = "delay"
         const val ENABLED_KEY = "enabled"
         const val TEST_KEY = "test"
-        const val HOSTPORT_KEY = "hostport"
+        const val HOSTPORT_KEY = "address"
     }
 
     private val prefs: SharedPreferences = getDefaultSharedPreferences(context)
@@ -133,7 +133,7 @@ internal class DreamCatcherPreferenceManager(private val context: Context) {
         get() = safeGetInt(DELAY_KEY, context.resources.getInteger(R.integer.delay_default))
 
     /** Address of the XMPP port of the Harmony Hub. */
-    val hostport: String
+    val address: String
         get() = prefs.getString(HOSTPORT_KEY, "")!!
 
     /** Result of the last attempt at connecting to the Harmony Hub. */
@@ -145,8 +145,8 @@ internal class DreamCatcherPreferenceManager(private val context: Context) {
             commit()
         }
 
-    /** Returns the value of `hostport` or a default value, suitable for display, if none is set. */
-    fun getHostportForDisplay(): String {
+    /** Returns the value of `address` or a default value, suitable for display, if none is set. */
+    fun getAddressForDisplay(): String {
         return prefs.getString(HOSTPORT_KEY, context.getString(R.string.harmony_hub))!!
     }
 

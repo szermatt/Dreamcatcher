@@ -17,7 +17,7 @@ class PowerOffWorker(
     companion object {
         /** Creates a one-time [WorkRequest] for this worker. */
         fun workRequest(
-            hostport: String,
+            address: String,
             delayInMinutes: Int = 0,
             dryRun: Boolean = false
         ): WorkRequest {
@@ -32,13 +32,13 @@ class PowerOffWorker(
             }
             val data = Data.Builder()
             data.putBoolean("dryRun", dryRun)
-            data.putString("hostport", hostport)
+            data.putString("address", address)
             b.setInputData(data.build())
             return b.build()
         }
     }
 
-    private val task = PowerOffTask(inputData.getString("hostport")!!)
+    private val task = PowerOffTask(inputData.getString("address")!!)
 
     override fun doWork(): Result {
         return try {
