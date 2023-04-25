@@ -1,23 +1,25 @@
 package net.gmx.szermatt.dreamcatcher
 
-import android.app.Activity
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
+import androidx.fragment.app.FragmentActivity
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 
 /**
  * The main activity, containing the settings.
  */
-class TvActivity : Activity() {
+class TvActivity : FragmentActivity() {
     private var mPreferenceListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val prefs = DreamCatcherPreferenceFragment()
-        fragmentManager.beginTransaction().replace(R.id.preferences, prefs).commit()
+        supportFragmentManager.beginTransaction().replace(
+            R.id.preferences,
+            DreamCatcherPreferenceFragment()
+        ).commit()
     }
 
     override fun onStart() {

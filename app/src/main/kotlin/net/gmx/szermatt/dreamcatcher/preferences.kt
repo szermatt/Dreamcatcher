@@ -5,8 +5,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.widget.Toast
 import androidx.annotation.IntDef
-import androidx.leanback.app.ProgressBarManager
-import androidx.leanback.preference.LeanbackPreferenceFragment
+import androidx.leanback.preference.LeanbackPreferenceFragmentCompat
 import androidx.preference.Preference
 import androidx.preference.PreferenceManager.getDefaultSharedPreferences
 import androidx.work.WorkManager
@@ -19,32 +18,35 @@ import java.lang.Integer.parseInt
 /**
  * Helper for accessing and changing preferences used by this app.
  */
-class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
-    val mProgressManager = ProgressBarManager()
-
+class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preference, rootKey)
-
-        val prefs = DreamCatcherPreferenceManager(context)
 
         val enabled: Preference =
             preferenceManager.findPreference(DreamCatcherPreferenceManager.ENABLED_KEY)!!
         enabled.setSummaryProvider {
-            getString(
+            val context = it.context
+            val prefs = DreamCatcherPreferenceManager(context)
+            context.getString(
                 R.string.preference_enabled_summary, prefs.getHostportForDisplay(), prefs.delay
             )
         }
         val delay: Preference =
             preferenceManager.findPreference(DreamCatcherPreferenceManager.DELAY_KEY)!!
         delay.setSummaryProvider {
-            getString(R.string.preference_delay_summary, prefs.delay)
+            val context = it.context
+            val prefs = DreamCatcherPreferenceManager(context)
+            context.getString(R.string.preference_delay_summary, prefs.delay)
         }
         val hostport: Preference =
             preferenceManager.findPreference(DreamCatcherPreferenceManager.HOSTPORT_KEY)!!
         hostport.setSummaryProvider {
-            getString(R.string.preference_hostport_summary, prefs.getHostportForDisplay())
+            val context = it.context
+            val prefs = DreamCatcherPreferenceManager(context)
+            context.getString(R.string.preference_hostport_summary, prefs.getHostportForDisplay())
         }
-        hostport.setOnPreferenceChangeListener { _, newValue ->
+        hostport.setOnPreferenceChangeListener { p, newValue ->
+            val prefs = DreamCatcherPreferenceManager(p.context)
             if (newValue != prefs.hostport) {
                 // Changing the address invalidates the test result.
                 prefs.test = TEST_RESULT_UNKNOWN
@@ -53,14 +55,19 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
         }
         val test: Preference = preferenceManager.findPreference("test")!!
         test.setSummaryProvider {
+            val context = it.context
+            val prefs = DreamCatcherPreferenceManager(context)
             val id = when (prefs.test) {
                 TEST_RESULT_OK -> R.string.preference_test_ok_summary
                 TEST_RESULT_FAIL -> R.string.preference_test_fail_summary
                 else -> R.string.preference_test_summary
             }
-            getString(id, prefs.getHostportForDisplay())
+            context.getString(id, prefs.getHostportForDisplay())
         }
         test.setOnPreferenceClickListener {
+            val context = it.context
+            val prefs = DreamCatcherPreferenceManager(context)
+
             Toast.makeText(context, "Testing connection...", Toast.LENGTH_LONG).show()
             prefs.test = TEST_RESULT_UNKNOWN
             val op = WorkManager.getInstance(context).enqueue(
@@ -81,9 +88,14 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
         }
         val powerOff: Preference = preferenceManager.findPreference("powerOff")!!
         powerOff.setSummaryProvider {
-            getString(R.string.preference_poweroff_summary, prefs.getHostportForDisplay())
+            val context = it.context
+            val prefs = DreamCatcherPreferenceManager(context)
+            context.getString(R.string.preference_poweroff_summary, prefs.getHostportForDisplay())
         }
         powerOff.setOnPreferenceClickListener {
+            val context = it.context
+            val prefs = DreamCatcherPreferenceManager(context)
+
             Toast.makeText(context, "Powering off...", Toast.LENGTH_LONG).show()
             val op =
                 WorkManager.getInstance(context).enqueue(PowerOffWorker.workRequest(prefs.hostport))
@@ -199,7 +211,7 @@ internal class DreamCatcherPreferenceManager(private val context: Context) {
         return try {
             prefs.getInt(key, defaultValue)
         } catch (e: ClassCastException) {
-            parseInt(prefs.getString(key, defaultValue.toString()))
+            parseInt(prefs.getString(key, defaultValue.toString())!!)
         }
     }
 }
