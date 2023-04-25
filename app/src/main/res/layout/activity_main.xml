@@ -4,9 +4,14 @@
     android:layout_height="match_parent"
     android:background="@drawable/background">
 
-    <FrameLayout
+    <RelativeLayout
         android:layout_height="match_parent"
-        android:layout_width="512dp"
-        android:layout_alignParentRight="true"
-        android:id="@+id/preferences" />
+        android:layout_width="match_parent">
+
+        <FrameLayout
+            android:layout_height="match_parent"
+            android:layout_width="512dp"
+            android:layout_alignParentRight="true"
+            android:id="@+id/preferences" />
+    </RelativeLayout>
 </FrameLayout>

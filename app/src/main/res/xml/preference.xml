@@ -3,12 +3,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     app:title="@string/preferences_title">
     <SwitchPreference
-        android:defaultValue="false"
+        android:defaultValue="@bool/enabled_default"
         android:key="enabled"
         android:title="@string/preference_enabled"
         android:dependency="hostport" />
     <ListPreference
-        android:defaultValue="10"
+        android:defaultValue="@integer/delay_default"
         android:entries="@array/preference_delay"
         android:entryValues="@array/preference_delay_values"
         android:key="delay"

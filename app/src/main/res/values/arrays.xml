@@ -9,7 +9,7 @@
         <item>20m</item>
         <item>30m</item>
     </string-array>
-    <string-array name="preference_delay_values">
+    <integer-array name="preference_delay_values">
         <item>1</item>
         <item>3</item>
         <item>5</item>
@@ -17,5 +17,5 @@
         <item>15</item>
         <item>20</item>
         <item>30</item>
-    </string-array>
+    </integer-array>
 </resources>

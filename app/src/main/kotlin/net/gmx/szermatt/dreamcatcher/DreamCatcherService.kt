@@ -7,7 +7,6 @@ import android.content.*
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.preference.PreferenceManager.getDefaultSharedPreferences
 import androidx.work.WorkManager
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 
@@ -20,7 +19,7 @@ internal fun serviceIntent(context: Context) = Intent(context, DreamCatcherServi
  */
 class Autostart : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (DreamCatcherService.isEnabled(context)) {
+        if (DreamCatcherPreferenceManager(context).enabled) {
             Log.i(TAG, "autostart")
             context.startForegroundService(serviceIntent(context))
         }
@@ -29,9 +28,6 @@ class Autostart : BroadcastReceiver() {
 
 class DreamCatcherService : Service() {
     companion object {
-        fun isEnabled(context: Context) = isEnabled(getDefaultSharedPreferences(context))
-        fun isEnabled(prefs: SharedPreferences) = prefs.getBoolean("enabled", false)
-
         private const val CHANNEL_ID = "DreamCatcher"
         private const val WORKER_TAG = "powerOff"
     }
@@ -40,7 +36,7 @@ class DreamCatcherService : Service() {
     private var mRegistered = false
 
     /** Registered listener, non-null when [mRegistered] is true. */
-    private var mEnabledListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
+    private var mDisabledListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     /** Broadcast receiver for dreaming started, non-null when [mRegistered] is true. */
     private var mDreamingStarted: BroadcastReceiver? = null
@@ -54,40 +50,42 @@ class DreamCatcherService : Service() {
 
     override fun onDestroy() {
         if (mRegistered) {
-            val prefs = getDefaultSharedPreferences(this)
-            prefs.unregisterOnSharedPreferenceChangeListener(mEnabledListener)
+            DreamCatcherPreferenceManager(this).unregister(mDisabledListener)
+            mDisabledListener = null
+
             unregisterReceiver(mDreamingStarted)
-            unregisterReceiver(mDreamingStopped)
-            mRegistered = false
-            mEnabledListener = null
             mDreamingStarted = null
+
+            unregisterReceiver(mDreamingStopped)
             mDreamingStopped = null
+
+            mRegistered = false
         }
         Log.d(TAG, "Service destroyed")
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        val prefs = getDefaultSharedPreferences(this)
-        if (!isEnabled(prefs)) {
-            stopService(intent)
-            return START_STICKY
-        }
+
         if (!mRegistered) {
-            mEnabledListener =
-                SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-                    if (key == "enabled" && !isEnabled(prefs)) {
-                        stopService(intent)
-                    }
-                }
-            prefs.registerOnSharedPreferenceChangeListener(mEnabledListener)
+            val prefs = DreamCatcherPreferenceManager(this)
+            mDisabledListener = prefs.onDisabled {
+                WorkManager.getInstance(this).cancelAllWorkByTag(WORKER_TAG)
+                stopService(intent)
+            }
+            if (mDisabledListener == null) return START_STICKY
 
             mDreamingStarted = object : BroadcastReceiver() {
                 override fun onReceive(context: Context, intent: Intent) {
-                    val prefs = getDefaultSharedPreferences(context)
-                    val delayInMinutes = prefs.getInt("delay", 10)
-                    Log.d(TAG, "Dreaming started, power off in ${delayInMinutes}m")
+                    if (!prefs.enabled) return;
+
+                    val delayInMinutes = prefs.delay
+                    val hostport = prefs.hostport
+                    Log.d(
+                        TAG,
+                        "Dreaming started, send power off to ${hostport} in ${delayInMinutes}m"
+                    )
                     WorkManager.getInstance(context).enqueue(
-                        PowerOffWorker.workRequest(delayInMinutes = delayInMinutes)
+                        PowerOffWorker.workRequest(hostport, delayInMinutes = delayInMinutes)
                     )
                 }
             }

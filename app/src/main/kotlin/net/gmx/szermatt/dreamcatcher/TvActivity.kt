@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
-import androidx.preference.PreferenceManager.getDefaultSharedPreferences
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 
 /**
@@ -24,26 +23,17 @@ class TvActivity : Activity() {
     override fun onStart() {
         super.onStart()
         Log.i(TAG, "started")
-        val prefs = getDefaultSharedPreferences(this)
+        val prefs = DreamCatcherPreferenceManager(this)
         val intent = serviceIntent(this)
-        if (DreamCatcherService.isEnabled(prefs)) {
+        mPreferenceListener = prefs.onEnabled {
             startForegroundService(intent)
-        } else {
-            mPreferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-                if (key == "enabled" && DreamCatcherService.isEnabled(prefs)) {
-                    startForegroundService(intent)
-                }
-            }
-            prefs.registerOnSharedPreferenceChangeListener(mPreferenceListener)
         }
     }
 
     override fun onDestroy() {
-        if (mPreferenceListener != null) {
-            val prefs = getDefaultSharedPreferences(this)
-            prefs.unregisterOnSharedPreferenceChangeListener(mPreferenceListener)
-            mPreferenceListener = null
-        }
+        DreamCatcherPreferenceManager(this).unregister(mPreferenceListener)
+        mPreferenceListener = null
+
         super.onDestroy()
     }
 }

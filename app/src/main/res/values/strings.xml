@@ -5,7 +5,7 @@
     <string name="preference_enabled">Enabled</string>
     <string name="preference_enabled_summary">Send a power off command to %1$s %2$dm after Day Dream started</string>
     <string name="preference_delay">Day Dream duration</string>
-    <string name="preference_delay_summary">Let Day Dream run for %1$dm.</string>
+    <string name="preference_delay_summary">Daydream for up to %1$dm.</string>
     <string name="preference_hostport">Harmony Hub Address</string>
     <string name="preference_hostport_dialog_title">Host name or address of the Harmony Hub</string>
     <string name="preference_hostport_summary">Connect to the Harmony XMPP service on %1$s</string>

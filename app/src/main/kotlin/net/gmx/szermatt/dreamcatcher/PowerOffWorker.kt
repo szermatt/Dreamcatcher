@@ -2,7 +2,6 @@ package net.gmx.szermatt.dreamcatcher
 
 import android.content.Context
 import android.util.Log
-import androidx.preference.PreferenceManager.getDefaultSharedPreferences
 import androidx.work.*
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffTask
@@ -17,7 +16,11 @@ class PowerOffWorker(
 
     companion object {
         /** Creates a one-time [WorkRequest] for this worker. */
-        fun workRequest(delayInMinutes: Int = 0, dryRun: Boolean = false): WorkRequest {
+        fun workRequest(
+            hostport: String,
+            delayInMinutes: Int = 0,
+            dryRun: Boolean = false
+        ): WorkRequest {
             val b = OneTimeWorkRequest.Builder(PowerOffWorker::class.java)
                 .setConstraints(
                     Constraints.Builder()
@@ -29,14 +32,13 @@ class PowerOffWorker(
             }
             val data = Data.Builder()
             data.putBoolean("dryRun", dryRun)
+            data.putString("hostport", hostport)
             b.setInputData(data.build())
             return b.build()
         }
     }
 
-    private val task = PowerOffTask(
-        getDefaultSharedPreferences(context).getString("hostport", "192.168.1.116")!!
-    )
+    private val task = PowerOffTask(inputData.getString("hostport")!!)
 
     override fun doWork(): Result {
         return try {
