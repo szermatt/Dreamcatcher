@@ -3,7 +3,6 @@ package net.gmx.szermatt.dreamcatcher
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.annotation.IntDef
 import androidx.leanback.app.ProgressBarManager
@@ -11,7 +10,6 @@ import androidx.leanback.preference.LeanbackPreferenceFragment
 import androidx.preference.Preference
 import androidx.preference.PreferenceManager.getDefaultSharedPreferences
 import androidx.work.WorkManager
-import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_FAIL
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_OK
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_UNKNOWN
@@ -64,19 +62,17 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
         }
         test.setOnPreferenceClickListener {
             Toast.makeText(context, "Testing connection...", Toast.LENGTH_LONG).show()
-            mProgressManager.enableProgressBar()
+            prefs.test = TEST_RESULT_UNKNOWN
             val op = WorkManager.getInstance(context).enqueue(
                 PowerOffWorker.workRequest(prefs.hostport, dryRun = true)
             )
-            val result = op.result
-            result.addListener({
-                mProgressManager.disableProgressBar()
-                prefs.test = TEST_RESULT_UNKNOWN
-                try {
-                    result.get()
+            op.result.addListener(object : OperationListener(op) {
+                override fun onSuccess() {
                     prefs.test = TEST_RESULT_OK
                     Toast.makeText(context, "Connection OK", Toast.LENGTH_LONG).show()
-                } catch (e: Exception) {
+                }
+
+                override fun onError() {
                     prefs.test = TEST_RESULT_FAIL
                     Toast.makeText(context, "Connection failed!", Toast.LENGTH_LONG).show()
                 }
@@ -89,55 +85,23 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
         }
         powerOff.setOnPreferenceClickListener {
             Toast.makeText(context, "Powering off...", Toast.LENGTH_LONG).show()
-            mProgressManager.enableProgressBar()
             val op =
                 WorkManager.getInstance(context).enqueue(PowerOffWorker.workRequest(prefs.hostport))
-            val result = op.result
-            result.addListener({
-                mProgressManager.disableProgressBar()
-                try {
-                    result.get()
-                } catch (e: Exception) {
+            op.result.addListener(object : OperationListener(op) {
+                override fun onSuccess() {
+                    prefs.test = TEST_RESULT_OK
+                }
+
+                override fun onError() {
                     Toast.makeText(context, "Power off failed!", Toast.LENGTH_LONG).show()
                 }
             }, context.mainExecutor)
             true
         }
     }
-
-    override fun onStart() {
-        super.onStart()
-
-        mProgressManager.setRootView(activity.findViewById(R.id.main))
-    }
-
-    /** Returns the value of `delay` or a default value, if still unset. */
-    private fun getDelayOrDefault(prefs: SharedPreferences): Int {
-        try {
-            return prefs.getInt("delay", 10)
-        } catch (e: ClassCastException) {
-            val v = prefs.getString("delay", "10")
-            Log.e(TAG, "content of delay preference ($v) is not an int", e)
-            return parseInt(v)
-        }
-    }
-
-    /** Returns the value of `hostport` or a default value, suitable for display, if none is set. */
-    private fun getHostportOrDefault(prefs: SharedPreferences, ctx: Context): String {
-        return prefs.getString("hostport", ctx.getString(R.string.harmony_hub))!!
-    }
 }
 
-@IntDef(TEST_RESULT_UNKNOWN, TEST_RESULT_OK, TEST_RESULT_FAIL)
-@Retention(AnnotationRetention.SOURCE)
-annotation class TestResult {
-    companion object {
-        const val TEST_RESULT_UNKNOWN = 0
-        const val TEST_RESULT_OK = 1
-        const val TEST_RESULT_FAIL = 2
-    }
-}
-
+/** Helper for accessing and changing the preferences of this app. */
 internal class DreamCatcherPreferenceManager(private val context: Context) {
     companion object {
         const val DELAY_KEY = "delay"
@@ -148,15 +112,19 @@ internal class DreamCatcherPreferenceManager(private val context: Context) {
 
     private val prefs: SharedPreferences = getDefaultSharedPreferences(context)
 
+    /** Checks whether the [DreamCatcherService] should run. */
     val enabled: Boolean
         get() = safeGetBoolean(ENABLED_KEY, context.resources.getBoolean(R.bool.enabled_default))
 
+    /** Delay between the start of a daydream and sending the power off command. */
     val delay: Int
         get() = safeGetInt(DELAY_KEY, context.resources.getInteger(R.integer.delay_default))
 
+    /** Address of the XMPP port of the Harmony Hub. */
     val hostport: String
         get() = prefs.getString(HOSTPORT_KEY, "")!!
 
+    /** Result of the last attempt at connecting to the Harmony Hub. */
     @TestResult
     var test: Int
         get() = safeGetInt(TEST_KEY, TEST_RESULT_UNKNOWN)
@@ -183,7 +151,7 @@ internal class DreamCatcherPreferenceManager(private val context: Context) {
             return null
         }
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == DreamCatcherPreferenceManager.ENABLED_KEY && enabled) {
+            if (key == ENABLED_KEY && enabled) {
                 lambda()
             }
         }
@@ -208,6 +176,7 @@ internal class DreamCatcherPreferenceManager(private val context: Context) {
                 lambda()
             }
         }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
         return listener
     }
 
@@ -232,5 +201,16 @@ internal class DreamCatcherPreferenceManager(private val context: Context) {
         } catch (e: ClassCastException) {
             parseInt(prefs.getString(key, defaultValue.toString()))
         }
+    }
+}
+
+/** Value for `test` in [DreamCatcherPreferenceManager]. */
+@IntDef(TEST_RESULT_UNKNOWN, TEST_RESULT_OK, TEST_RESULT_FAIL)
+@Retention(AnnotationRetention.SOURCE)
+annotation class TestResult {
+    companion object {
+        const val TEST_RESULT_UNKNOWN = 0
+        const val TEST_RESULT_OK = 1
+        const val TEST_RESULT_FAIL = 2
     }
 }
