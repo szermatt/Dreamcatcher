@@ -4,12 +4,15 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.widget.Toast
+import androidx.leanback.app.ProgressBarManager
 import androidx.leanback.preference.LeanbackPreferenceFragment
 import androidx.preference.Preference
 import androidx.work.WorkManager
 
 
 class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
+    val mProgressManager = ProgressBarManager()
+
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preference, rootKey)
 
@@ -37,11 +40,13 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
         }
         test.setOnPreferenceClickListener {
             Toast.makeText(context, "Testing connection...", Toast.LENGTH_LONG).show()
+            mProgressManager.enableProgressBar()
             val op = WorkManager.getInstance(context).enqueue(
                 PowerOffWorker.workRequest(dryRun = true)
             )
             val result = op.result
             result.addListener({
+                mProgressManager.disableProgressBar()
                 // TODO: have the preference show the result (success, failure, unknown)
                 try {
                     result.get()
@@ -58,9 +63,11 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
         }
         powerOff.setOnPreferenceClickListener {
             Toast.makeText(context, "Powering off...", Toast.LENGTH_LONG).show()
+            mProgressManager.enableProgressBar()
             val op = WorkManager.getInstance(context).enqueue(PowerOffWorker.workRequest())
             val result = op.result
             result.addListener({
+                mProgressManager.disableProgressBar()
                 try {
                     result.get()
                 } catch (e: Exception) {
@@ -69,6 +76,12 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragment() {
             }, context.mainExecutor)
             true
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        mProgressManager.setRootView(activity.findViewById(R.id.main))
     }
 
     /** Returns the value of `delay` or a default value, if still unset. */
