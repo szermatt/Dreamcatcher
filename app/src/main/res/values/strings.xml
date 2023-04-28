@@ -16,4 +16,9 @@
     <string name="harmony_hub">the Harmony Hub</string>
     <string name="preference_test_ok_summary">Connection to %1$s OK</string>
     <string name="preference_test_fail_summary">Connection to %1$s FAILED. Make sure that address is correct and that XMPP is enabled on the Harmony Hub.</string>
+    <string name="testing_connection">Connecting...</string>
+    <string name="powering_off">Powering off...</string>
+    <string name="progress_cancelled">Cancelled</string>
+    <string name="progress_succeeded">OK</string>
+    <string name="progress_failed">Failed</string>
 </resources>

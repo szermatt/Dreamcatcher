@@ -3,12 +3,13 @@ package net.gmx.szermatt.dreamcatcher
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
-import android.widget.Toast
 import androidx.annotation.IntDef
 import androidx.leanback.preference.LeanbackPreferenceFragmentCompat
 import androidx.preference.Preference
 import androidx.preference.PreferenceManager.getDefaultSharedPreferences
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import androidx.work.WorkRequest
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_FAIL
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_OK
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_UNKNOWN
@@ -68,22 +69,19 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
             val context = it.context
             val prefs = DreamCatcherPreferenceManager(context)
 
-            Toast.makeText(context, "Testing connection...", Toast.LENGTH_LONG).show()
             prefs.test = TEST_RESULT_UNKNOWN
-            val op = WorkManager.getInstance(context).enqueue(
-                PowerOffWorker.workRequest(prefs.address, dryRun = true)
-            )
-            op.result.addListener(object : OperationListener(op) {
-                override fun onSuccess() {
-                    prefs.test = TEST_RESULT_OK
-                    Toast.makeText(context, "Connection OK", Toast.LENGTH_LONG).show()
-                }
 
-                override fun onError() {
-                    prefs.test = TEST_RESULT_FAIL
-                    Toast.makeText(context, "Connection failed!", Toast.LENGTH_LONG).show()
+            val request = PowerOffWorker.workRequest(prefs.address, dryRun = true)
+            val workManager = WorkManager.getInstance(context)
+            workManager.enqueue(request)
+            showProgress(request,  context.getString(R.string.testing_connection))
+            onWorkDone(workManager, this, request) { state ->
+                when (state) {
+                    WorkInfo.State.SUCCEEDED -> prefs.test = TEST_RESULT_OK
+                    WorkInfo.State.FAILED -> prefs.test = TEST_RESULT_FAIL
+                    else -> {}
                 }
-            }, context.mainExecutor)
+            }
             true
         }
         val powerOff: Preference = preferenceManager.findPreference("powerOff")!!
@@ -96,20 +94,25 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
             val context = it.context
             val prefs = DreamCatcherPreferenceManager(context)
 
-            Toast.makeText(context, "Powering off...", Toast.LENGTH_LONG).show()
-            val op =
-                WorkManager.getInstance(context).enqueue(PowerOffWorker.workRequest(prefs.address))
-            op.result.addListener(object : OperationListener(op) {
-                override fun onSuccess() {
+            val request = PowerOffWorker.workRequest(prefs.address)
+            val workManager = WorkManager.getInstance(context)
+            workManager.enqueue(request)
+            showProgress(request,  context.getString(R.string.powering_off))
+            onWorkDone(workManager, this, request) { state ->
+                if (state == WorkInfo.State.SUCCEEDED) {
                     prefs.test = TEST_RESULT_OK
                 }
-
-                override fun onError() {
-                    Toast.makeText(context, "Power off failed!", Toast.LENGTH_LONG).show()
-                }
-            }, context.mainExecutor)
+            }
             true
         }
+    }
+
+    /** Show a fragment that tracks the progress of [request]. */
+    private fun showProgress(request: WorkRequest, message: String) {
+        parentFragmentManager
+            .beginTransaction()
+            .add(R.id.main, WorkProgressFragment.create(request.id, message))
+            .commit()
     }
 }
 
