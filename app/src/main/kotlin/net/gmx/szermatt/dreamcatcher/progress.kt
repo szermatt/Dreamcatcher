@@ -1,11 +1,11 @@
 package net.gmx.szermatt.dreamcatcher
 
-import androidx.fragment.app.Fragment
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.TextView
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
 import androidx.work.WorkInfo
@@ -21,15 +21,15 @@ fun onWorkDone(
     lambda: (WorkInfo.State) -> Unit
 ) {
     val liveWorkInfo = manager.getWorkInfoByIdLiveData(request.id)
-    liveWorkInfo.value?.state?.let { state ->
-        if(isFinal(state)) {
-            lambda(state)
-        }
+    val state = liveWorkInfo.value?.state
+    if (state != null && isFinal(state)) {
+        lambda(state)
+        return
     }
     val observer = object : Observer<WorkInfo> {
         override fun onChanged(workInfo: WorkInfo?) {
             workInfo?.state?.let { state ->
-                if(isFinal(state)) {
+                if (isFinal(state)) {
                     liveWorkInfo.removeObserver(this)
                     lambda(state)
                 }
