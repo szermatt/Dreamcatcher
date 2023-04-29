@@ -89,7 +89,7 @@ class WorkProgressFragment : Fragment(R.layout.progress_fragment) {
     // TODO: handle BACK, cancelling work
     companion object {
         /** How long to show a final state before detaching the fragment. */
-        private const val DETACH_DELAY_MS = 1000
+        private const val DETACH_DELAY_MS = 1000L
 
         /**
          * Creates a new fragment for tracking a work request.
@@ -136,7 +136,7 @@ class WorkProgressFragment : Fragment(R.layout.progress_fragment) {
 
         Handler(Looper.getMainLooper()).postDelayed({
             parentFragmentManager.beginTransaction().remove(this).commit()
-        }, 1000)
+        }, DETACH_DELAY_MS)
         mHiding = true
     }
 }
