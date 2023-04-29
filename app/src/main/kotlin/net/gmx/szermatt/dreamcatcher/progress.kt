@@ -3,6 +3,7 @@ package net.gmx.szermatt.dreamcatcher
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.View
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -10,6 +11,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
+import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 import java.util.*
 
 /** Cancels the worker if it is blocked. */
@@ -23,6 +25,7 @@ fun cancelWhenBlocked(
     if (isFinal(initial)) return
 
     if (initial == WorkInfo.State.BLOCKED) {
+        Log.i(TAG, "${requestId} blocked, cancelling.")
         manager.cancelWorkById(requestId)
         return
     }
@@ -31,11 +34,13 @@ fun cancelWhenBlocked(
             val state = workInfo?.state
             when {
                 state == WorkInfo.State.BLOCKED -> {
+                    Log.i(TAG, "${requestId} blocked, cancelling.")
                     liveWorkInfo.removeObserver(this)
                     manager.cancelWorkById(requestId)
                 }
                 isFinal(state) -> {
-                    manager.cancelWorkById(requestId)
+                    Log.d(TAG, "${requestId} done.")
+                    liveWorkInfo.removeObserver(this)
                 }
             }
         }
@@ -53,6 +58,7 @@ fun onWorkDone(
     val liveWorkInfo = manager.getWorkInfoByIdLiveData(requestId)
     val initial = liveWorkInfo.value?.state
     if (initial != null && isFinal(initial)) {
+        Log.d(TAG, "${requestId} reached final state ${initial}.")
         lambda(initial)
         return
     }
@@ -60,6 +66,7 @@ fun onWorkDone(
         override fun onChanged(workInfo: WorkInfo?) {
             val state = workInfo?.state
             if (state != null && isFinal(state)) {
+                Log.d(TAG, "${requestId} reached final state ${state}.")
                 liveWorkInfo.removeObserver(this)
                 lambda(state)
             }

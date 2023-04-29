@@ -65,8 +65,8 @@ class DreamCatcherService : Service() {
     }
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+        if (mRegistered) return START_STICKY
 
-        if (!mRegistered) {
             val prefs = DreamCatcherPreferenceManager(this)
             mDisabledListener = prefs.onDisabled {
                 WorkManager.getInstance(this).cancelAllWorkByTag(WORKER_TAG)
@@ -110,7 +110,7 @@ class DreamCatcherService : Service() {
             WorkManager.getInstance(this).cancelAllWorkByTag(WORKER_TAG)
 
             Log.d(TAG, "Service started with intent " + intent.action)
-        }
+
         return START_STICKY
     }
 

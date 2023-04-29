@@ -6,29 +6,28 @@
         android:defaultValue="@bool/enabled_default"
         android:key="enabled"
         android:title="@string/preference_enabled"
+        android:summary="@string/preference_enabled_summary"
+        android:iconSpaceReserved="true"
         android:dependency="address" />
     <ListPreference
-        android:defaultValue="@integer/delay_default"
+        android:defaultValue="@string/delay_default"
         android:entries="@array/preference_delay"
         android:entryValues="@array/preference_delay_values"
         android:key="delay"
         android:title="@string/preference_delay"
-        android:icon="@drawable/ic_access_time"
-        app:useSimpleSummaryProvider="true" />
+        android:icon="@drawable/ic_access_time" />
     <EditTextPreference
         android:key="address"
         android:selectAllOnFocus="true"
         android:singleLine="true"
         android:title="@string/preference_address"
         android:icon="@drawable/ic_settings_remote"
-        app:dialogTitle="@string/preference_address_dialog_title"
-        app:useSimpleSummaryProvider="true" />
-    <Preference
+        app:dialogTitle="@string/preference_address_dialog_title" />
+    <net.gmx.szermatt.dreamcatcher.TestResultPreference
         android:key="test"
         android:title="@string/preference_test"
         android:icon="@drawable/ic_record_voice_over"
-        android:dependency="address"
-        app:summary="@string/preference_test_summary" />
+        android:dependency="address" />
     <Preference
         android:key="powerOff"
         android:title="@string/preference_poweroff"
