@@ -6,6 +6,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.View
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
@@ -86,7 +87,6 @@ private fun isFinal(state: WorkInfo.State?): Boolean {
 
 /** A fragment that displays shows the state of a work request. */
 class WorkProgressFragment : Fragment(R.layout.progress_fragment) {
-    // TODO: handle BACK, cancelling work
     companion object {
         /** How long to show a final state before detaching the fragment. */
         private const val DETACH_DELAY_MS = 1000L
@@ -111,6 +111,27 @@ class WorkProgressFragment : Fragment(R.layout.progress_fragment) {
     private var mLabel: TextView? = null
     private var mStateLabel: TextView? = null
     private var mHiding = false
+    private var mHidden = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        requireActivity()
+            .onBackPressedDispatcher
+            .addCallback(this, object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (!mHiding) {
+                        val c = context
+                        val id = arguments?.getString("uuid", null)
+
+                        if (c != null && id != null) {
+                            WorkManager.getInstance(c).cancelWorkById(UUID.fromString(id))
+                        }
+                    }
+                    hideNow()
+                }
+            })
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         mLabel = view.findViewById<TextView>(R.id.progressLabel)!!
@@ -135,8 +156,15 @@ class WorkProgressFragment : Fragment(R.layout.progress_fragment) {
         if (mHiding) return
 
         Handler(Looper.getMainLooper()).postDelayed({
-            parentFragmentManager.beginTransaction().remove(this).commit()
+            hideNow()
         }, DETACH_DELAY_MS)
         mHiding = true
+    }
+
+    private fun hideNow() {
+        if (mHidden) return
+
+        mHidden = true
+        parentFragmentManager.beginTransaction().remove(this).commit()
     }
 }
