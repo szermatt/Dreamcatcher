@@ -3,6 +3,7 @@ package net.gmx.szermatt.dreamcatcher
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.util.Log
 import androidx.annotation.IntDef
 import androidx.leanback.preference.LeanbackPreferenceFragmentCompat
 import androidx.preference.Preference
@@ -10,6 +11,7 @@ import androidx.preference.PreferenceManager.getDefaultSharedPreferences
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
+import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_FAIL
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_OK
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_UNKNOWN
@@ -207,16 +209,28 @@ internal class DreamCatcherPreferenceManager(private val context: Context) {
     private fun safeGetBoolean(key: String, defaultValue: Boolean): Boolean {
         return try {
             prefs.getBoolean(key, defaultValue)
-        } catch (e: ClassCastException) {
-            parseBoolean(prefs.getString(key, defaultValue.toString()))
+        } catch (_: ClassCastException) {
+            val s = prefs.getString(key, defaultValue.toString())
+            try {
+                parseBoolean(s)
+            } catch (_: IllegalArgumentException) {
+                Log.w(TAG, "Invalid preference value for ${key}: '${s}'")
+                defaultValue
+            }
         }
     }
 
     private fun safeGetInt(key: String, defaultValue: Int): Int {
         return try {
             prefs.getInt(key, defaultValue)
-        } catch (e: ClassCastException) {
-            parseInt(prefs.getString(key, defaultValue.toString())!!)
+        } catch (_: ClassCastException) {
+            val s = prefs.getString(key, defaultValue.toString())!!
+            try {
+                parseInt(s)
+            } catch (_: IllegalArgumentException) {
+                Log.w(TAG, "Invalid preference value for ${key}: '${s}'")
+                defaultValue
+            }
         }
     }
 }
