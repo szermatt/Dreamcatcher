@@ -21,5 +21,4 @@
     <string name="progress_cancelled">Cancelled</string>
     <string name="progress_succeeded">OK</string>
     <string name="progress_failed">Failed</string>
-    <string name="progress_blocked">Blocked</string>
 </resources>

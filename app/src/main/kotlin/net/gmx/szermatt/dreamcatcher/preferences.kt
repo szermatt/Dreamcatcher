@@ -69,14 +69,14 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
             val context = it.context
             val prefs = DreamCatcherPreferenceManager(context)
 
-            prefs.test = TEST_RESULT_UNKNOWN
-
             val request = PowerOffWorker.workRequest(prefs.address, dryRun = true)
             val workManager = WorkManager.getInstance(context)
             workManager.enqueue(request)
             showProgress(request, context.getString(R.string.testing_connection))
-            cancelWhenBlocked(workManager, this, request)
-            onWorkDone(workManager, this, request) { state ->
+            cancelWhenBlocked(workManager, this, request.id)
+
+            prefs.test = TEST_RESULT_UNKNOWN
+            onWorkDone(workManager, this, request.id) { state ->
                 when (state) {
                     WorkInfo.State.SUCCEEDED -> prefs.test = TEST_RESULT_OK
                     WorkInfo.State.FAILED -> prefs.test = TEST_RESULT_FAIL
@@ -99,8 +99,8 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
             val workManager = WorkManager.getInstance(context)
             workManager.enqueue(request)
             showProgress(request, context.getString(R.string.powering_off))
-            cancelWhenBlocked(workManager, this, request)
-            onWorkDone(workManager, this, request) { state ->
+            cancelWhenBlocked(workManager, this, request.id)
+            onWorkDone(workManager, this, request.id) { state ->
                 if (state == WorkInfo.State.SUCCEEDED) {
                     prefs.test = TEST_RESULT_OK
                 }

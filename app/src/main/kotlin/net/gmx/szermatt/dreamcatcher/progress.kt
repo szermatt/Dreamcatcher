@@ -10,33 +10,33 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.Observer
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import androidx.work.WorkRequest
 import java.util.*
 
 /** Cancels the worker if it is blocked. */
 fun cancelWhenBlocked(
     manager: WorkManager,
     owner: LifecycleOwner,
-    request: WorkRequest,
+    requestId: UUID,
 ) {
-    val liveWorkInfo = manager.getWorkInfoByIdLiveData(request.id)
+    val liveWorkInfo = manager.getWorkInfoByIdLiveData(requestId)
     val initial = liveWorkInfo.value?.state
     if (isFinal(initial)) return
 
     if (initial == WorkInfo.State.BLOCKED) {
-        manager.cancelWorkById(request.id)
+        manager.cancelWorkById(requestId)
         return
     }
     val observer = object : Observer<WorkInfo> {
         override fun onChanged(workInfo: WorkInfo?) {
             val state = workInfo?.state
-            if (state == null) return
-
-            if (state == WorkInfo.State.BLOCKED) {
-                liveWorkInfo.removeObserver(this)
-                manager.cancelWorkById(request.id)
-            } else if (isFinal(state)) {
-                liveWorkInfo.removeObserver(this)
+            when {
+                state == WorkInfo.State.BLOCKED -> {
+                    liveWorkInfo.removeObserver(this)
+                    manager.cancelWorkById(requestId)
+                }
+                isFinal(state) -> {
+                    manager.cancelWorkById(requestId)
+                }
             }
         }
     }
@@ -47,10 +47,10 @@ fun cancelWhenBlocked(
 fun onWorkDone(
     manager: WorkManager,
     owner: LifecycleOwner,
-    request: WorkRequest,
+    requestId: UUID,
     lambda: (WorkInfo.State) -> Unit
 ) {
-    val liveWorkInfo = manager.getWorkInfoByIdLiveData(request.id)
+    val liveWorkInfo = manager.getWorkInfoByIdLiveData(requestId)
     val initial = liveWorkInfo.value?.state
     if (initial != null && isFinal(initial)) {
         lambda(initial)
@@ -108,45 +108,18 @@ class WorkProgressFragment : Fragment(R.layout.progress_fragment) {
         mLabel = view.findViewById<TextView>(R.id.progressLabel)!!
         mLabel?.text = arguments?.getString("message") ?: ""
         mStateLabel = view.findViewById<TextView>(R.id.progressStateLabel)!!
+        mStateLabel?.visibility = View.GONE
 
         val uuid = UUID.fromString(arguments?.getString("uuid") ?: "")
         val workManager = WorkManager.getInstance(context!!)
-        val liveWorkInfo = workManager.getWorkInfoByIdLiveData(uuid)
-        updateProgress(liveWorkInfo.value)
-        liveWorkInfo.observe(viewLifecycleOwner) { updateProgress(it) }
-    }
-
-    /**
-     * Have the UI reflect the state of [WorkInfo].
-     *
-     * Once the worker has entered a final state, the fragment detaches itself after a delay.
-     */
-    private fun updateProgress(workInfo: WorkInfo?) {
-        when (workInfo?.state) {
-            WorkInfo.State.CANCELLED -> {
-                mStateLabel?.visibility = View.VISIBLE
-                mStateLabel?.text = getString(R.string.progress_cancelled)
-                hideLater()
+        onWorkDone(workManager, viewLifecycleOwner, uuid) { state ->
+            mStateLabel?.visibility = View.VISIBLE
+            mStateLabel?.text = when (state) {
+                WorkInfo.State.SUCCEEDED -> getString(R.string.progress_succeeded)
+                WorkInfo.State.CANCELLED -> getString(R.string.progress_cancelled)
+                else -> getString(R.string.progress_failed)
             }
-            WorkInfo.State.SUCCEEDED -> {
-                mStateLabel?.visibility = View.VISIBLE
-                mStateLabel?.text = getString(R.string.progress_succeeded)
-                hideLater()
-            }
-            WorkInfo.State.FAILED -> {
-                mStateLabel?.visibility = View.VISIBLE
-                mStateLabel?.text = getString(R.string.progress_failed)
-                hideLater()
-            }
-            WorkInfo.State.BLOCKED -> {
-                // TODO: let the user choose what to do when the work is blocked
-                mStateLabel?.visibility = View.VISIBLE
-                mStateLabel?.text = getString(R.string.progress_blocked)
-            }
-            else -> {
-                mStateLabel?.visibility = View.GONE
-                mStateLabel?.text = ""
-            }
+            hideLater()
         }
     }
 
