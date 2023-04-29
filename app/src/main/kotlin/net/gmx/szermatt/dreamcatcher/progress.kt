@@ -86,6 +86,7 @@ private fun isFinal(state: WorkInfo.State?): Boolean {
 
 /** A fragment that displays shows the state of a work request. */
 class WorkProgressFragment : Fragment(R.layout.progress_fragment) {
+    // TODO: handle BACK, cancelling work
     companion object {
         /** How long to show a final state before detaching the fragment. */
         private const val DETACH_DELAY_MS = 1000
