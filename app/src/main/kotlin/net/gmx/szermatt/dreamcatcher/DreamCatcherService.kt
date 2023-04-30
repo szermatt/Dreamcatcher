@@ -85,7 +85,11 @@ class DreamCatcherService : Service() {
                         "Dreaming started, send power off to ${address} in ${delayInMinutes}m"
                     )
                     WorkManager.getInstance(context).enqueue(
-                        PowerOffWorker.workRequest(address, delayInMinutes = delayInMinutes)
+                        PowerOffWorker.workRequest(
+                            address,
+                            delayInMinutes = delayInMinutes,
+                            tag = WORKER_TAG,
+                        )
                     )
                 }
             }

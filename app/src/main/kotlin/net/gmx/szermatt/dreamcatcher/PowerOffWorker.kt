@@ -19,7 +19,8 @@ class PowerOffWorker(
         fun workRequest(
             address: String,
             delayInMinutes: Int = 0,
-            dryRun: Boolean = false
+            dryRun: Boolean = false,
+            tag: String? = null
         ): WorkRequest {
             val b = OneTimeWorkRequest.Builder(PowerOffWorker::class.java)
             if (delayInMinutes > 0) {
@@ -30,6 +31,7 @@ class PowerOffWorker(
                 )
                 b.setInitialDelay(delayInMinutes.toLong(), TimeUnit.MINUTES)
             }
+            tag?.let { b.addTag(it) }
             val data = Data.Builder()
             data.putBoolean("dryRun", dryRun)
             data.putString("address", address)
