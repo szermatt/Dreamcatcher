@@ -5,10 +5,12 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.AttributeSet
 import android.util.Log
+import android.view.View
 import androidx.annotation.IntDef
 import androidx.leanback.preference.LeanbackPreferenceFragmentCompat
 import androidx.preference.Preference
 import androidx.preference.PreferenceManager.getDefaultSharedPreferences
+import androidx.preference.PreferenceViewHolder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
@@ -232,7 +234,45 @@ annotation class TestResult {
 class TestResultPreference(
     context: Context, attrs: AttributeSet?
 ) : Preference(context, attrs) {
+    private var mCross: View? = null
+    private var mTicked: View? = null
+
     constructor(context: Context) : this(context, null) {}
+
+    init {
+        widgetLayoutResource = R.layout.result_pref_widget_layout
+    }
+
+    override fun onBindViewHolder(holder: PreferenceViewHolder) {
+        super.onBindViewHolder(holder)
+
+        mTicked = holder.findViewById(R.id.prefs_ticked)
+        mCross = holder.findViewById(R.id.prefs_cross)
+
+        updateIcon()
+    }
+
+    private fun updateIcon() {
+        when (getPersistedInt(TEST_RESULT_UNKNOWN)) {
+            TEST_RESULT_OK -> {
+                mTicked?.visibility = View.VISIBLE
+                mCross?.visibility = View.INVISIBLE
+            }
+            TEST_RESULT_FAIL -> {
+                mTicked?.visibility = View.INVISIBLE
+                mCross?.visibility = View.VISIBLE
+            }
+            else -> {
+                mTicked?.visibility = View.INVISIBLE
+                mCross?.visibility = View.INVISIBLE
+            }
+        }
+    }
+
+    override fun notifyChanged() {
+        super.notifyChanged()
+        updateIcon()
+    }
 
     fun invalidateResult() {
         set(TEST_RESULT_UNKNOWN)
