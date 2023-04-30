@@ -208,13 +208,14 @@ class WorkProgressFragment : Fragment(R.layout.progress_fragment) {
      * Have the spinner/progress bar reflect the progress reported by the worker.
      */
     private fun updateProgress(workInfo: WorkInfo) {
-        if (isFinal(workInfo.state)) {
-            Log.d(TAG, "Progress: 100%")
+        if (workInfo.state == WorkInfo.State.SUCCEEDED) {
             // Move progress bar to 100%, since we might have missed the last update. Note that
             // if the spinner is still showing, this does nothing.
+            Log.d(TAG, "Progress: 100%")
             mProgressBar?.progress = 100
             return
         }
+
         val progress = workInfo.progress
         val currentStep = progress.getInt(CURRENT_STEP_KEY, -1)
         val stepCount = progress.getInt(STEP_COUNT_KEY, 0)
