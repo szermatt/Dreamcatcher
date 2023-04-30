@@ -22,12 +22,12 @@ class PowerOffWorker(
             dryRun: Boolean = false
         ): WorkRequest {
             val b = OneTimeWorkRequest.Builder(PowerOffWorker::class.java)
-                .setConstraints(
+            if (delayInMinutes > 0) {
+                b.setConstraints(
                     Constraints.Builder()
                         .setRequiredNetworkType(NetworkType.CONNECTED)
                         .build()
                 )
-            if (delayInMinutes > 0) {
                 b.setInitialDelay(delayInMinutes.toLong(), TimeUnit.MINUTES)
             }
             val data = Data.Builder()
