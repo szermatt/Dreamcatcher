@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.work.*
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
-import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffTask
 import java.util.concurrent.CancellationException
 import java.util.concurrent.TimeUnit
@@ -37,22 +36,16 @@ class PowerOffWorker(
             b.setInputData(data.build())
             return b.build()
         }
-
-        /** Extracts the last step done from progress data reported by the worker. */
-        @PowerOffStep
-        fun getProgress(data: Data): Int {
-            return data.getInt("step", PowerOffStep.STEP_SCHEDULED)
-        }
     }
 
     private val task = PowerOffTask(
         inputData.getString("address")!!,
         listener = object: PowerOffTask.Listener {
-            override fun onPowerOffTaskProgress(step: Int) {
+            override fun onPowerOffTaskProgress(step: Int, stepCount: Int) {
                 Log.d(TAG, "PowerOffWorker progress step=${step}")
 
                 val data = Data.Builder()
-                data.putInt("step", step)
+                WorkProgressFragment.fillProgressData(data, step, stepCount)
                 setProgressAsync(data.build())
             }
         }

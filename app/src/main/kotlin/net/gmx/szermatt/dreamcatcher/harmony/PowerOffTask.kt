@@ -2,6 +2,8 @@ package net.gmx.szermatt.dreamcatcher.harmony
 
 import androidx.annotation.GuardedBy
 import androidx.annotation.IntDef
+import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.MAX_DRY_RUN_STEP
+import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.MAX_STEP
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.STEP_AUTH_CONNECTED
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.STEP_AUTH_DONE
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.STEP_DONE
@@ -10,7 +12,6 @@ import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.STEP_RESOLVE
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.STEP_SCHEDULED
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.STEP_STARTED
 import org.jivesoftware.smack.AbstractConnectionListener
-import org.jivesoftware.smack.ConnectionListener
 import org.jivesoftware.smack.SmackException.NoResponseException
 import org.jivesoftware.smack.StanzaCollector
 import org.jivesoftware.smack.XMPPConnection
@@ -18,7 +19,6 @@ import org.jivesoftware.smack.android.AndroidSmackInitializer
 import org.jivesoftware.smack.packet.Bind
 import org.jivesoftware.smack.packet.Stanza
 import org.jivesoftware.smack.provider.ProviderManager
-import org.jivesoftware.smack.roster.rosterstore.DirectoryRosterStore.init
 import org.jivesoftware.smack.sasl.SASLMechanism
 import org.jivesoftware.smack.tcp.XMPPTCPConnection
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration
@@ -35,7 +35,7 @@ class PowerOffTask(
 ) {
     /** A listener can be told about the progress of the task. */
     interface Listener {
-        fun onPowerOffTaskProgress(@PowerOffStep step: Int);
+        fun onPowerOffTaskProgress(@PowerOffStep step: Int, stepCount: Int);
     }
 
     /**
@@ -65,17 +65,17 @@ class PowerOffTask(
      */
     @Throws(Exception::class)
     fun run(dryRun: Boolean = false) {
-        reportProgress(PowerOffStep.STEP_STARTED)
+        reportProgress(PowerOffStep.STEP_STARTED, dryRun)
         init()
         val config = buildConfig()
-        reportProgress(PowerOffStep.STEP_RESOLVED)
+        reportProgress(PowerOffStep.STEP_RESOLVED, dryRun)
 
-        val identity = obtainSessionToken(config)
-        reportProgress(PowerOffStep.STEP_AUTH_DONE)
+        val identity = obtainSessionToken(config, dryRun)
+        reportProgress(PowerOffStep.STEP_AUTH_DONE, dryRun)
         if (dryRun) return
 
         powerOff(config, identity)
-        reportProgress(PowerOffStep.STEP_DONE)
+        reportProgress(PowerOffStep.STEP_DONE, dryRun)
     }
 
     /**
@@ -96,12 +96,14 @@ class PowerOffTask(
 
     /** Obtain a session token to login to the harmony hub. */
     @Throws(Exception::class)
-    private fun obtainSessionToken(config: XMPPTCPConnectionConfiguration): String {
+    private fun obtainSessionToken(
+        config: XMPPTCPConnectionConfiguration, dryRun: Boolean
+    ): String {
         val connection: XMPPTCPConnection = HarmonyXMPPTCPConnection(config)
         try {
-            connection.addConnectionListener(object: AbstractConnectionListener() {
+            connection.addConnectionListener(object : AbstractConnectionListener() {
                 override fun connected(connection: XMPPConnection?) {
-                    reportProgress(PowerOffStep.STEP_AUTH_CONNECTED)
+                    reportProgress(PowerOffStep.STEP_AUTH_CONNECTED, dryRun)
                 }
             })
             cancelIfStopped()
@@ -133,12 +135,14 @@ class PowerOffTask(
      * Connect with the given session token and send the power off command.
      */
     @Throws(Exception::class)
-    private fun powerOff(config: XMPPTCPConnectionConfiguration, sessionToken: String) {
+    private fun powerOff(
+        config: XMPPTCPConnectionConfiguration, sessionToken: String
+    ) {
         val connection: XMPPTCPConnection = HarmonyXMPPTCPConnection(config)
         try {
-            connection.addConnectionListener(object: AbstractConnectionListener() {
+            connection.addConnectionListener(object : AbstractConnectionListener() {
                 override fun connected(connection: XMPPConnection?) {
-                    reportProgress(PowerOffStep.STEP_MAIN_CONNECTED)
+                    reportProgress(PowerOffStep.STEP_MAIN_CONNECTED, dryRun = false)
                 }
             })
             cancelIfStopped()
@@ -202,8 +206,14 @@ class PowerOffTask(
     }
 
     /** Reports having progressed to the given step. */
-    private fun reportProgress(@PowerOffStep step: Int) {
-        listener?.onPowerOffTaskProgress(step)
+    private fun reportProgress(@PowerOffStep step: Int, dryRun: Boolean) {
+        listener?.onPowerOffTaskProgress(
+            step, if (dryRun) {
+                MAX_DRY_RUN_STEP
+            } else {
+                MAX_STEP
+            }
+        )
     }
 
     companion object {
@@ -244,5 +254,8 @@ annotation class PowerOffStep {
         const val STEP_AUTH_DONE = 40
         const val STEP_MAIN_CONNECTED = 50
         const val STEP_DONE = 60
+
+        const val MAX_DRY_RUN_STEP = STEP_AUTH_DONE
+        const val MAX_STEP = STEP_DONE
     }
 }

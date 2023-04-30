@@ -19,7 +19,6 @@
     <string name="testing_connection">Connecting...</string>
     <string name="powering_off">Powering off...</string>
     <string name="progress_cancelled">Cancelled</string>
-    <string name="progress_succeeded">OK</string>
     <string name="progress_failed">Failed</string>
     <string name="delay_default">10</string>
 </resources>
