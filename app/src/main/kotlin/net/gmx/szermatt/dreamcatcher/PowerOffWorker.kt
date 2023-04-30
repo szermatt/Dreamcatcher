@@ -42,8 +42,6 @@ class PowerOffWorker(
         inputData.getString("address")!!,
         listener = object: PowerOffTask.Listener {
             override fun onPowerOffTaskProgress(step: Int, stepCount: Int) {
-                Log.d(TAG, "PowerOffWorker progress step=${step}")
-
                 val data = Data.Builder()
                 WorkProgressFragment.fillProgressData(data, step, stepCount)
                 setProgressAsync(data.build())

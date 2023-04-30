@@ -219,12 +219,10 @@ class WorkProgressFragment : Fragment(R.layout.progress_fragment) {
         val progress = workInfo.progress
         val currentStep = progress.getInt(CURRENT_STEP_KEY, -1)
         val stepCount = progress.getInt(STEP_COUNT_KEY, 0)
-        Log.d(TAG, "updateProgress($currentStep, $stepCount)")
 
         if (currentStep < 0 || currentStep > stepCount) return
 
         val percent = (currentStep.toFloat() / stepCount.toFloat() * 100).roundToInt()
-        Log.d(TAG, "Progress: ${percent}%")
         if (mProgressBar?.visibility != View.VISIBLE) {
             // Since a percentage is now available, show the progress bar instead of the spinner.
             mSpinner?.visibility = View.GONE
