@@ -24,8 +24,8 @@ fun cancelWhenBlocked(
         return
     }
     val observer = object : Observer<WorkInfo> {
-        override fun onChanged(workInfo: WorkInfo?) {
-            val state = workInfo?.state
+        override fun onChanged(value: WorkInfo) {
+            val state = value.state
             when {
                 state == WorkInfo.State.BLOCKED -> {
                     Log.i(DreamCatcherApplication.TAG, "${requestId} blocked, cancelling.")
@@ -57,13 +57,13 @@ fun onWorkDone(
         return
     }
     val observer = object : Observer<WorkInfo> {
-        override fun onChanged(workInfo: WorkInfo?) {
-            val state = workInfo?.state
-            if (state != null && isFinal(state)) {
-                Log.d(DreamCatcherApplication.TAG, "${requestId} reached final state ${state}.")
-                liveWorkInfo.removeObserver(this)
-                lambda(state)
-            }
+        override fun onChanged(value: WorkInfo) {
+            val state = value.state
+            if (!isFinal(state)) return
+
+            Log.d(DreamCatcherApplication.TAG, "$requestId reached final state ${state}.")
+            liveWorkInfo.removeObserver(this)
+            lambda(state)
         }
     }
     liveWorkInfo.observe(owner, observer)
