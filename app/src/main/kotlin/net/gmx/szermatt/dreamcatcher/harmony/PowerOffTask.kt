@@ -1,7 +1,9 @@
 package net.gmx.szermatt.dreamcatcher.harmony
 
+import android.util.Log
 import androidx.annotation.GuardedBy
 import androidx.annotation.IntDef
+import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.MAX_DRY_RUN_STEP
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.MAX_STEP
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.STEP_AUTH_CONNECTED
@@ -24,12 +26,13 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnection
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration
 import org.jxmpp.jid.parts.Resourcepart
 import java.net.InetAddress
+import java.net.UnknownHostException
 import java.util.concurrent.CancellationException
 import java.util.concurrent.locks.ReentrantLock
 
 /** Sends a power off command to the Harmony hub.  */
 class PowerOffTask(
-    private val host: String,
+    private val host: String? = null,
     private val port: Int = 5222,
     private val listener: Listener? = null,
 ) {
@@ -67,7 +70,13 @@ class PowerOffTask(
     fun run(dryRun: Boolean = false) {
         reportProgress(PowerOffStep.STEP_STARTED, dryRun)
         init()
-        val config = buildConfig()
+        val address = if (host != null) {
+            InetAddress.getByName(host)
+        } else {
+            discoverHub() ?: throw UnknownHostException("No Harmony Hub found")
+        }
+        Log.i(TAG, "Connecting to Harmony Hub on ${address}")
+        val config = buildConfig(address)
         reportProgress(PowerOffStep.STEP_RESOLVED, dryRun)
 
         val identity = obtainSessionToken(config, dryRun)
@@ -83,11 +92,11 @@ class PowerOffTask(
      *
      * @throws java.net.UnknownHostException if the given hostname cannot be resolved
      */
-    private fun buildConfig(): XMPPTCPConnectionConfiguration {
+    private fun buildConfig(address: InetAddress): XMPPTCPConnectionConfiguration {
         // Note that hostname resolution is done here, because Smack's DNS resolution
         // doesn't always follow the local DNS configuration.
         return XMPPTCPConnectionConfiguration.builder()
-            .setHostAddress(InetAddress.getByName(host))
+            .setHostAddress(address)
             .setPort(port)
             .setXmppDomain("harmonyhub")
             .addEnabledSaslMechanism(SASLMechanism.PLAIN)

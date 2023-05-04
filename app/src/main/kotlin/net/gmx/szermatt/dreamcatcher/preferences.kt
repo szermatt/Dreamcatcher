@@ -30,8 +30,6 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
 
         val delay: Preference =
             preferenceManager.findPreference(DreamCatcherPreferenceManager.DELAY_KEY)!!
-        val address: Preference =
-            preferenceManager.findPreference(DreamCatcherPreferenceManager.HOSTPORT_KEY)!!
         val test = preferenceManager.findPreference<TestResultPreference>("test")!!
         val powerOff: Preference = preferenceManager.findPreference("powerOff")!!
 
@@ -40,21 +38,6 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
             val prefs = DreamCatcherPreferenceManager(context)
             context.getString(R.string.preference_delay_summary, prefs.delay)
         }
-
-        address.setSummaryProvider {
-            val context = it.context
-            val prefs = DreamCatcherPreferenceManager(context)
-            context.getString(R.string.preference_address_summary, prefs.getAddressForDisplay())
-        }
-        address.setOnPreferenceChangeListener { p, newValue ->
-            val prefs = DreamCatcherPreferenceManager(p.context)
-            if (newValue != prefs.address) {
-                // Changing the address invalidates the test result.
-                test.invalidateResult()
-            }
-            true
-        }
-
         test.setSummaryProvider {
             val context = it.context
             val prefs = DreamCatcherPreferenceManager(context)
@@ -63,12 +46,12 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
                 TEST_RESULT_FAIL -> R.string.preference_test_fail_summary
                 else -> R.string.preference_test_summary
             }
-            context.getString(id, prefs.getAddressForDisplay())
+            context.getString(id)
         }
         test.setOnPreferenceClickListener {
             val context = it.context
             val prefs = DreamCatcherPreferenceManager(context)
-            val request = PowerOffWorker.workRequest(prefs.address, dryRun = true)
+            val request = PowerOffWorker.workRequest(dryRun = true)
             val workManager = WorkManager.getInstance(context)
             workManager.enqueue(request)
             showProgress(request, context.getString(R.string.testing_connection))
@@ -88,8 +71,7 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
 
         powerOff.setOnPreferenceClickListener {
             val context = it.context
-            val prefs = DreamCatcherPreferenceManager(context)
-            val request = PowerOffWorker.workRequest(prefs.address)
+            val request = PowerOffWorker.workRequest()
             val workManager = WorkManager.getInstance(context)
             workManager.enqueue(request)
             showProgress(request, context.getString(R.string.powering_off))
@@ -115,7 +97,6 @@ internal class DreamCatcherPreferenceManager(
         const val DELAY_KEY = "delay"
         const val ENABLED_KEY = "enabled"
         const val TEST_KEY = "test"
-        const val HOSTPORT_KEY = "address"
     }
 
     private val prefs: SharedPreferences = getDefaultSharedPreferences(context)
@@ -128,19 +109,10 @@ internal class DreamCatcherPreferenceManager(
     val delay: Int
         get() = safeGetInt(DELAY_KEY, parseInt(context.resources.getString(R.string.delay_default)))
 
-    /** Address of the XMPP port of the Harmony Hub. */
-    val address: String
-        get() = prefs.getString(HOSTPORT_KEY, "")!!
-
     /** Result of the last attempt at connecting to the Harmony Hub. */
     @TestResult
     val test: Int
         get() = safeGetInt(TEST_KEY, TEST_RESULT_UNKNOWN)
-
-    /** Returns the value of `address` or a default value, suitable for display, if none is set. */
-    fun getAddressForDisplay(): String {
-        return prefs.getString(HOSTPORT_KEY, context.getString(R.string.harmony_hub))!!
-    }
 
     /**
      * Executes [lambda] once `enabled` becomes true.

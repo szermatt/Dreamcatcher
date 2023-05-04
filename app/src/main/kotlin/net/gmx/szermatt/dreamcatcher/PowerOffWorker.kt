@@ -17,7 +17,6 @@ class PowerOffWorker(
     companion object {
         /** Creates a one-time [WorkRequest] for this worker. */
         fun workRequest(
-            address: String,
             delayInMinutes: Int = 0,
             dryRun: Boolean = false,
             tag: String? = null
@@ -34,14 +33,12 @@ class PowerOffWorker(
             tag?.let { b.addTag(it) }
             val data = Data.Builder()
             data.putBoolean("dryRun", dryRun)
-            data.putString("address", address)
             b.setInputData(data.build())
             return b.build()
         }
     }
 
     private val task = PowerOffTask(
-        inputData.getString("address")!!,
         listener = object: PowerOffTask.Listener {
             override fun onPowerOffTaskProgress(step: Int, stepCount: Int) {
                 val data = Data.Builder()
