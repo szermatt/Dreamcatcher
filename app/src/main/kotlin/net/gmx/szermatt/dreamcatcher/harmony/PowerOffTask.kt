@@ -33,6 +33,7 @@ import java.util.concurrent.locks.ReentrantLock
 /** Sends a power off command to the Harmony hub.  */
 class PowerOffTask(
     private val host: String? = null,
+    private val uuid: String? = null,
     private val port: Int = 5222,
     private val listener: Listener? = null,
 ) {
@@ -73,7 +74,7 @@ class PowerOffTask(
         val address = if (host != null) {
             InetAddress.getByName(host)
         } else {
-            discoverHub() ?: throw UnknownHostException("No Harmony Hub found")
+            discoverHub(uuid = uuid) ?: throw UnknownHostException("No Harmony Hub found")
         }
         Log.i(TAG, "Connecting to Harmony Hub on ${address}")
         val config = buildConfig(address)

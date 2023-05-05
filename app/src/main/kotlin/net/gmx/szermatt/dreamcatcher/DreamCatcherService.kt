@@ -85,6 +85,7 @@ class DreamCatcherService : Service() {
                     )
                     WorkManager.getInstance(context).enqueue(
                         PowerOffWorker.workRequest(
+                            uuid = prefs.hub?.uuid,
                             delayInMinutes = delayInMinutes,
                             tag = WORKER_TAG,
                         )

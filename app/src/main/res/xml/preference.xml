@@ -15,6 +15,11 @@
         android:key="delay"
         android:title="@string/preference_delay"
         android:icon="@drawable/ic_access_time" />
+    <ListPreference
+        android:key="hub"
+        android:title="@string/preference_hub"
+        android:icon="@drawable/ic_stat_computer"
+        android:summary="@string/preference_hub_summary" />
     <net.gmx.szermatt.dreamcatcher.TestResultPreference
         android:key="test"
         android:title="@string/preference_test"

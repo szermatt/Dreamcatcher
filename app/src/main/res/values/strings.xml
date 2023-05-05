@@ -17,4 +17,7 @@
     <string name="progress_cancelled">Cancelled</string>
     <string name="progress_failed">Failed</string>
     <string name="delay_default">10</string>
+    <string name="preference_hub">Harmony Hub</string>
+    <string name="preference_hub_summary">Discover a Harmony Hub on the local network</string>
+    <string name="discovered_hub">%1$s (online)</string>
 </resources>

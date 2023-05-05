@@ -8,16 +8,22 @@ import android.util.Log
 import android.view.View
 import androidx.annotation.IntDef
 import androidx.leanback.preference.LeanbackPreferenceFragmentCompat
+import androidx.lifecycle.lifecycleScope
+import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceManager.getDefaultSharedPreferences
 import androidx.preference.PreferenceViewHolder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_FAIL
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_OK
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_UNKNOWN
+import net.gmx.szermatt.dreamcatcher.harmony.DiscoveredHub
+import net.gmx.szermatt.dreamcatcher.harmony.discoveryFlow
 import java.lang.Boolean.parseBoolean
 import java.lang.Integer.parseInt
 
@@ -28,33 +34,49 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preference, rootKey)
 
+        val prefs = DreamCatcherPreferenceManager(requireContext())
         val delay: Preference =
             preferenceManager.findPreference(DreamCatcherPreferenceManager.DELAY_KEY)!!
-        val test = preferenceManager.findPreference<TestResultPreference>("test")!!
+        val hubList = preferenceManager.findPreference<ListPreference>("hub")!!
+        val test = preferenceManager.findPreference<TestResultPreference>(
+            DreamCatcherPreferenceManager.TEST_KEY
+        )!!
         val powerOff: Preference = preferenceManager.findPreference("powerOff")!!
 
         delay.setSummaryProvider {
-            val context = it.context
-            val prefs = DreamCatcherPreferenceManager(context)
-            context.getString(R.string.preference_delay_summary, prefs.delay)
+            it.context.getString(R.string.preference_delay_summary, prefs.delay)
         }
+
+        prefs.hub?.let { selected ->
+            hubList.entries = arrayOf(selected.friendlyName)
+            hubList.entryValues = arrayOf(selected.toString())
+            hubList.setValueIndex(0)
+        }
+        hubList.setSummaryProvider {
+            prefs.hub?.friendlyName
+                ?: it.context.getString(R.string.preference_hub_summary)
+        }
+        hubList.setOnPreferenceChangeListener { _, _ ->
+            test.invalidateResult()
+            true
+        }
+        lifecycleScope.launch(Dispatchers.Main) {
+            updateHubList(requireContext(), hubList)
+        }
+
         test.setSummaryProvider {
-            val context = it.context
-            val prefs = DreamCatcherPreferenceManager(context)
             val id = when (prefs.test) {
                 TEST_RESULT_OK -> R.string.preference_test_ok_summary
                 TEST_RESULT_FAIL -> R.string.preference_test_fail_summary
                 else -> R.string.preference_test_summary
             }
-            context.getString(id)
+            it.context.getString(id)
         }
         test.setOnPreferenceClickListener {
-            val context = it.context
-            val prefs = DreamCatcherPreferenceManager(context)
-            val request = PowerOffWorker.workRequest(dryRun = true)
-            val workManager = WorkManager.getInstance(context)
+            val request = PowerOffWorker.workRequest(uuid = prefs.hub?.uuid, dryRun = true)
+            val workManager = WorkManager.getInstance(it.context)
             workManager.enqueue(request)
-            showProgress(request, context.getString(R.string.testing_connection))
+            showProgress(request, it.context.getString(R.string.testing_connection))
             cancelWhenBlocked(workManager, this, request.id)
 
             test.invalidateResult()
@@ -70,13 +92,40 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
         }
 
         powerOff.setOnPreferenceClickListener {
-            val context = it.context
-            val request = PowerOffWorker.workRequest()
-            val workManager = WorkManager.getInstance(context)
+            val request = PowerOffWorker.workRequest(uuid = prefs.hub?.uuid)
+            val workManager = WorkManager.getInstance(it.context)
             workManager.enqueue(request)
-            showProgress(request, context.getString(R.string.powering_off))
+            showProgress(request, it.context.getString(R.string.powering_off))
             cancelWhenBlocked(workManager, this, request.id)
             true
+        }
+    }
+
+    private suspend fun updateHubList(context: Context, hubList: ListPreference) {
+        val hubs = mutableMapOf<String, DiscoveredHub>()
+        hubList.value?.let { hubString ->
+            DiscoveredHub.fromString(hubString)?.let { hub ->
+                hubs[hub.uuid] = hub
+            }
+        }
+        discoveryFlow().collect { hub ->
+            hubs[hub.uuid] = hub
+
+            val selected = hubList.value?.let { DiscoveredHub.fromString(it)?.uuid }
+            hubList.entries = hubs.map { (_, hub) ->
+                context.getString(R.string.discovered_hub, hub.friendlyName)
+            }.toTypedArray()
+            hubList.entryValues = hubs.map { (_, hub) ->
+                hub.toString()
+            }.toTypedArray()
+            if (selected != null) {
+                val index = hubs.keys.indexOf(selected)
+                if (index == -1) {
+                    Log.e(TAG, "Selected value ($selected) missing from map ($hubs)")
+                } else {
+                    hubList.setValueIndex(index)
+                }
+            }
         }
     }
 
@@ -97,6 +146,7 @@ internal class DreamCatcherPreferenceManager(
         const val DELAY_KEY = "delay"
         const val ENABLED_KEY = "enabled"
         const val TEST_KEY = "test"
+        const val HUB_KEY = "hub"
     }
 
     private val prefs: SharedPreferences = getDefaultSharedPreferences(context)
@@ -113,6 +163,10 @@ internal class DreamCatcherPreferenceManager(
     @TestResult
     val test: Int
         get() = safeGetInt(TEST_KEY, TEST_RESULT_UNKNOWN)
+
+    /** Currently selected Harmony Hub, if any. */
+    val hub: DiscoveredHub?
+        get() = DiscoveredHub.fromString(prefs.getString(HUB_KEY, "")!!)
 
     /**
      * Executes [lambda] once `enabled` becomes true.
