@@ -3,6 +3,8 @@ package net.gmx.szermatt.dreamcatcher.harmony
 import android.util.Log
 import androidx.annotation.GuardedBy
 import androidx.annotation.IntDef
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.MAX_DRY_RUN_STEP
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.MAX_STEP
@@ -45,27 +47,13 @@ class PowerOffTask(
      */
     private val mMessageLock = ReentrantLock()
 
-    /** Returns true if stop() was called.  */
-    @get:Synchronized
-    @GuardedBy("this")
-    var isStopped = false
-        private set
-
-    /** Stops communicating with the server at the next convenient point.  */
-    @Synchronized
-    fun stop() {
-        if (!isStopped) {
-            isStopped = true
-        }
-    }
-
     /**
      * Connects to the Harmony Hub and send the power off command.
      *
      * @throws CancellationException if the task was stopped before it could be completed
      */
     @Throws(Exception::class)
-    fun run(
+    suspend fun run(
         host: String? = null,
         uuid: String? = null,
         port: Int = 5222,
@@ -73,15 +61,20 @@ class PowerOffTask(
     ) {
         reportProgress(PowerOffStep.STEP_STARTED, dryRun)
         init()
+
+        ensureActive()
         val address = getAddress(host, uuid)
         Log.i(TAG, "Connecting to Harmony Hub on ${address}")
         val config = buildConfig(address, port)
         reportProgress(PowerOffStep.STEP_RESOLVED, dryRun)
 
+        ensureActive()
         val identity = obtainSessionToken(config, dryRun)
+
         reportProgress(PowerOffStep.STEP_AUTH_DONE, dryRun)
         if (dryRun) return
 
+        ensureActive()
         powerOff(config, identity)
         reportProgress(PowerOffStep.STEP_DONE, dryRun)
     }
@@ -107,8 +100,6 @@ class PowerOffTask(
      * @throws java.net.UnknownHostException if the given hostname cannot be resolved
      */
     private fun buildConfig(address: InetAddress, port: Int): XMPPTCPConnectionConfiguration {
-        // Note that hostname resolution is done here, because Smack's DNS resolution
-        // doesn't always follow the local DNS configuration.
         return XMPPTCPConnectionConfiguration.builder()
             .setHostAddress(address)
             .setPort(port)
@@ -119,7 +110,7 @@ class PowerOffTask(
 
     /** Obtain a session token to login to the harmony hub. */
     @Throws(Exception::class)
-    private fun obtainSessionToken(
+    private suspend fun obtainSessionToken(
         config: XMPPTCPConnectionConfiguration, dryRun: Boolean
     ): String {
         val connection: XMPPTCPConnection = HarmonyXMPPTCPConnection(config)
@@ -129,15 +120,16 @@ class PowerOffTask(
                     reportProgress(PowerOffStep.STEP_AUTH_CONNECTED, dryRun)
                 }
             })
-            cancelIfStopped()
+            ensureActive()
             connection.connect()
-            cancelIfStopped()
+            ensureActive()
             connection.login(
                 "${XMPP_USER_NAME}@${XMPP_USER_DOMAIN}",
                 XMPP_USER_PASSWORD,
                 Resourcepart.from("auth")
             )
-            cancelIfStopped()
+
+            ensureActive()
             connection.fromMode = XMPPConnection.FromMode.USER
             val reply = sendOAStanza(
                 connection,
@@ -158,7 +150,7 @@ class PowerOffTask(
      * Connect with the given session token and send the power off command.
      */
     @Throws(Exception::class)
-    private fun powerOff(
+    private suspend fun powerOff(
         config: XMPPTCPConnectionConfiguration, sessionToken: String
     ) {
         val connection: XMPPTCPConnection = HarmonyXMPPTCPConnection(config)
@@ -168,15 +160,15 @@ class PowerOffTask(
                     reportProgress(PowerOffStep.STEP_MAIN_CONNECTED, dryRun = false)
                 }
             })
-            cancelIfStopped()
+            ensureActive()
             connection.connect()
-            cancelIfStopped()
+            ensureActive()
             connection.login(
                 "${sessionToken}@${XMPP_USER_DOMAIN}",
                 sessionToken,
                 Resourcepart.from("main")
             )
-            cancelIfStopped()
+            ensureActive()
             connection.fromMode = XMPPConnection.FromMode.USER
             sendOAStanza(
                 connection,
@@ -189,6 +181,13 @@ class PowerOffTask(
                 connection.disconnect()
             }
         }
+    }
+
+    /**
+     * Checks whether the job has been cancelled and if yes, throws a cancellation exception.
+     */
+    private suspend fun ensureActive() {
+        currentCoroutineContext().ensureActive()
     }
 
     @Throws(Exception::class)
@@ -218,13 +217,6 @@ class PowerOffTask(
                 continue
             }
             return reply
-        }
-    }
-
-    @Throws(CancellationException::class)
-    private fun cancelIfStopped() {
-        if (isStopped) {
-            throw CancellationException("stopped")
         }
     }
 

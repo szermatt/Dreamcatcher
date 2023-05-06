@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 class PowerOffWorker(
     context: Context,
     params: WorkerParameters
-) : Worker(context, params) {
+) : CoroutineWorker(context, params) {
 
     companion object {
         /** Creates a one-time [WorkRequest] for this worker. */
@@ -52,7 +52,7 @@ class PowerOffWorker(
         }
     )
 
-    override fun doWork(): Result {
+    override suspend fun doWork(): Result {
         return try {
             val dryRun = inputData.getBoolean("dryRun", false)
             Log.d(TAG, "PowerOffWorker launched dryRun=$dryRun ")
@@ -66,10 +66,5 @@ class PowerOffWorker(
             Log.e(TAG, "PowerOffWorker failed with exception ${e}", e)
             Result.failure()
         }
-    }
-
-    override fun onStopped() {
-        Log.w(TAG, "PowerOffWorker stopped")
-        task.stop()
     }
 }
