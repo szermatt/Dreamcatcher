@@ -32,9 +32,6 @@ import java.util.concurrent.locks.ReentrantLock
 
 /** Sends a power off command to the Harmony hub.  */
 class PowerOffTask(
-    private val host: String? = null,
-    private val uuid: String? = null,
-    private val port: Int = 5222,
     private val listener: Listener? = null,
 ) {
     /** A listener can be told about the progress of the task. */
@@ -68,16 +65,17 @@ class PowerOffTask(
      * @throws CancellationException if the task was stopped before it could be completed
      */
     @Throws(Exception::class)
-    fun run(dryRun: Boolean = false) {
+    fun run(
+        host: String? = null,
+        uuid: String? = null,
+        port: Int = 5222,
+        dryRun: Boolean = false
+    ) {
         reportProgress(PowerOffStep.STEP_STARTED, dryRun)
         init()
-        val address = if (host != null) {
-            InetAddress.getByName(host)
-        } else {
-            discoverHub(uuid = uuid) ?: throw UnknownHostException("No Harmony Hub found")
-        }
+        val address = getAddress(host, uuid)
         Log.i(TAG, "Connecting to Harmony Hub on ${address}")
-        val config = buildConfig(address)
+        val config = buildConfig(address, port)
         reportProgress(PowerOffStep.STEP_RESOLVED, dryRun)
 
         val identity = obtainSessionToken(config, dryRun)
@@ -89,11 +87,26 @@ class PowerOffTask(
     }
 
     /**
+     * Returns the IP address to connect to.
+     *
+     * If [host] is null, getAddress uses discovery to find a Harmony Hub and either
+     * uses the first one, if [uuid] is null, or the one with the specified UUID.
+     *
+     * @throws UnknownHostException if [host] is invalid or no Hub with the specified UUId answered
+     */
+    private fun getAddress(host: String?, uuid: String?): InetAddress {
+        if (host != null) {
+            return InetAddress.getByName(host)
+        }
+        return discoverHub(uuid = uuid) ?: throw UnknownHostException("No Harmony Hub found")
+    }
+
+    /**
      * Builds the [XMPPTCPConnectionConfiguration] given the constructor parameters.
      *
      * @throws java.net.UnknownHostException if the given hostname cannot be resolved
      */
-    private fun buildConfig(address: InetAddress): XMPPTCPConnectionConfiguration {
+    private fun buildConfig(address: InetAddress, port: Int): XMPPTCPConnectionConfiguration {
         // Note that hostname resolution is done here, because Smack's DNS resolution
         // doesn't always follow the local DNS configuration.
         return XMPPTCPConnectionConfiguration.builder()

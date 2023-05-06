@@ -38,13 +38,13 @@ class PowerOffTaskTest {
         mainSocket.dumpAs("main", Charsets.UTF_8)
         sockets.add(mainSocket)
 
-        val task = PowerOffTask("127.0.0.1", 5222)
+        val task = PowerOffTask()
 
         val threadPool = Executors.newCachedThreadPool()
         try {
             runBlocking(threadPool.asCoroutineDispatcher()) {
                 launch {
-                    task.run()
+                    task.run(host = "127.0.0.1", port = 5222)
                 }
                 runAuth(authSocket)
                 runMain(mainSocket)

@@ -41,34 +41,22 @@ class PowerOffWorker(
         }
     }
 
-    // TODO: refactor task to avoid having to have a stopped field and synchronizing
     @GuardedBy("this")
-    private var stopped = false
-
-    @GuardedBy("this")
-    private var task: PowerOffTask? = null
+    private val task = PowerOffTask(
+        listener = object : PowerOffTask.Listener {
+            override fun onPowerOffTaskProgress(step: Int, stepCount: Int) {
+                val data = Data.Builder()
+                WorkProgressFragment.fillProgressData(data, step, stepCount)
+                setProgressAsync(data.build())
+            }
+        }
+    )
 
     override fun doWork(): Result {
         return try {
             val dryRun = inputData.getBoolean("dryRun", false)
             Log.d(TAG, "PowerOffWorker launched dryRun=$dryRun ")
-            synchronized(this) {
-                if (task == null) {
-                    if (stopped) throw CancellationException("stopped")
-
-                    task = PowerOffTask(
-                        uuid = inputData.getString("uuid"),
-                        listener = object : PowerOffTask.Listener {
-                            override fun onPowerOffTaskProgress(step: Int, stepCount: Int) {
-                                val data = Data.Builder()
-                                WorkProgressFragment.fillProgressData(data, step, stepCount)
-                                setProgressAsync(data.build())
-                            }
-                        }
-                    )
-                }
-                task
-            }?.run(dryRun = dryRun)
+            task.run(uuid = inputData.getString("uuid"), dryRun = dryRun)
             Log.d(TAG, "PowerOffWorker succeeded")
             Result.success()
         } catch (e: CancellationException) {
@@ -82,9 +70,6 @@ class PowerOffWorker(
 
     override fun onStopped() {
         Log.w(TAG, "PowerOffWorker stopped")
-        synchronized(this) {
-            stopped = true
-            task
-        }?.stop()
+        task.stop()
     }
 }
