@@ -127,7 +127,6 @@ class WorkProgressFragment : Fragment(R.layout.progress_fragment) {
         if (workInfo.state == WorkInfo.State.SUCCEEDED) {
             // Move progress bar to 100%, since we might have missed the last update. Note that
             // if the spinner is still showing, this does nothing.
-            Log.d(TAG, "Progress: 100%")
             mProgressBar?.progress = 100
             return
         }

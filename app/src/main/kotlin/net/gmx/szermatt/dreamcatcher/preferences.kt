@@ -61,13 +61,7 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
             true
         }
         lifecycleScope.launch(Dispatchers.Main) {
-            try {
-                Log.d(TAG, "updateHubList starts")
-                updateHubList(requireContext(), hubList)
-                Log.d(TAG, "updateHubLis ends")
-            } finally {
-                Log.d(TAG, "updateHubList finally ends")
-            }
+            updateHubList(requireContext(), hubList)
         }
 
         test.setSummaryProvider {
@@ -122,7 +116,6 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
             val onlineHubs = mutableSetOf<String>()
 
             for (hub in discoveryChannel()) {
-                Log.d(TAG, "Got hub: $hub")
                 if (onlineHubs.contains(hub.uuid)) continue
                 onlineHubs.add(hub.uuid)
 
@@ -141,7 +134,6 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
                 if (index >= 0) {
                     hubList.setValueIndex(index)
                 }
-                Log.d(TAG, "Rebuilt prefs")
             }
         }
 
