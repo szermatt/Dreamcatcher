@@ -1,22 +1,37 @@
 package net.gmx.szermatt.dreamcatcher.harmony
 
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.produce
+import net.gmx.szermatt.dreamcatcher.harmony.DiscoveredHub.Companion.fromString
 import java.io.IOException
 import java.io.InputStreamReader
+import java.lang.Long.min
 import java.net.*
+import kotlin.math.pow
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
+/**
+ * A Harmony Hub that was discovered.
+ *
+ * This type collects some of the important properties reported by Harmony Hub upon discovery,
+ * given the string sent by the hub as a response to the discovery request, passed to [fromString].
+ * Note, however, that [fromString] discards any property not exposed by [DiscoveredHub].
+ *
+ * DiscoveredHub can be serialized to a string using [toString] and re-created later with
+ * [fromString].
+ */
 class DiscoveredHub(
-    val friendlyName: String,
+    val friendlyName: String?,
     val uuid: String,
     val ip: String,
 ) {
     companion object {
+        /**
+         * Tries to parse a [DiscoveredHub] from the string and returns it.
+         */
         fun fromString(text: String): DiscoveredHub? {
             val attrs = text.split(';')
                 .map {
@@ -28,7 +43,7 @@ class DiscoveredHub(
                 .toMap()
             val ip = attrs["ip"] ?: return null
             val uuid = attrs["uuid"] ?: return null
-            val friendlyName = attrs["friendlyName"] ?: ""
+            val friendlyName = attrs["friendlyName"]
             return DiscoveredHub(friendlyName, uuid, ip)
         }
     }
@@ -38,100 +53,85 @@ class DiscoveredHub(
     }
 }
 
-fun discoveryFlow(
-    timeout: Duration = 1500.milliseconds,
-    tryCount: Int = 3,
-    ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-): Flow<DiscoveredHub> {
-    return flow {
-        ServerSocket(0 /* any available port */).use { serverSocket ->
-            serverSocket.soTimeout = timeout.inWholeMilliseconds.toInt()
-            repeat(tryCount) {
-                sendDiscoveryRequest(serverSocket.localPort)
-                while (true) {
-                    val connection = try {
-                        serverSocket.accept()
-                    } catch (e: SocketTimeoutException) {
-                        break // send another discovery request, tryCount allowing
-                    }
-                    try {
-                        connection.use { socket ->
-                            val text = InputStreamReader(
-                                socket.getInputStream(), Charsets.UTF_8
-                            ).readText()
-                            DiscoveredHub.fromString(text)?.let { emit(it) }
-                        }
-                    } catch (e: IOException) {
-                        continue // skip this connection
-                    }
-                }
-            }
-        }
-    }.flowOn(ioDispatcher)
-}
-
 /**
- * Sends out a discovery message to the hub and returns the address of the first Hub that responds.
+ * Returns a channel of [DiscoveredHub].
  *
- * TODO: remember the UUID of the right hub, if there's more than one, and use it here
+ * This function launches jobs to send out discovery requests to the Harmony Hub, collects
+ * their responses and sends them to the channel.
+ *
+ * Discovery keeps on running until it is cancelled, so this should normally be run within a
+ * scope with a meaningful lifetime, such as within a `withTimeout` block.
  */
-fun discoverHub(
-    uuid: String? = null,
-    timeout: Duration = 1500.milliseconds,
-    tryCount: Int = 3,
-): InetAddress? {
+@ExperimentalCoroutinesApi
+suspend fun CoroutineScope.discoveryChannel(
+    ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+): ReceiveChannel<DiscoveredHub> = produce(ioDispatcher, 10) {
     ServerSocket(0 /* any available port */).use { serverSocket ->
-        serverSocket.soTimeout = timeout.inWholeMilliseconds.toInt()
-        repeat(tryCount) {
-            sendDiscoveryRequest(serverSocket.localPort)
-            while (true) {
-                val connectionSocket = try {
-                    serverSocket.accept()
-                } catch (e: SocketTimeoutException) {
-                    break // retry
-                }
-                try {
-                    val text = InputStreamReader(
-                        connectionSocket.getInputStream(), Charsets.UTF_8
-                    ).readText()
-                    val attrs = parseDiscoveryResponse(text)
-                    if (uuid != null && attrs["uuid"] != uuid) continue // skip
+        val serverPort = serverSocket.localPort
+        launch {
+            sendDiscoveryRequestsUntilCancelled(serverPort)
+        }
 
-                    val ip = attrs["ip"] ?: continue // skip
-
-                    return@discoverHub InetAddress.getByName(ip)
-                } catch (e: IOException) {
-                    // skip
-                } finally {
-                    connectionSocket.close()
+        while (isActive && !isClosedForSend) {
+            val connection = serverSocket.cancellableAccept()
+            try {
+                connection.use { s ->
+                    DiscoveredHub.fromString(
+                        InputStreamReader(s.getInputStream(), Charsets.UTF_8).readText()
+                    )?.let { send(it) }
                 }
+            } catch (e: IOException) {
+                continue // skip this connection
             }
         }
     }
-    return null
 }
 
-/** Puts the discovery response into a map. */
-private fun parseDiscoveryResponse(text: String): Map<String, String> {
-    return text.split(';')
-        .map {
-            Pair(
-                it.substringBefore(':'),
-                it.substringAfter(':')
-            )
+/**
+ * Wraps [ServerSocket.accept] to make it cancellable.
+ *
+ * If the Job is cancelled, the server socket is closed and cannot be used again.
+ */
+@ExperimentalCoroutinesApi
+private suspend fun ServerSocket.cancellableAccept(): Socket {
+    return suspendCancellableCoroutine { cont ->
+        cont.invokeOnCancellation { close() }
+        cont.resume(
+            try {
+                accept()
+            } catch (e: SocketException) {
+                if (isClosed) {
+                    throw CancellationException("cancelled in accept()")
+                } else {
+                    throw e
+                }
+            }
+        ) {}
+    }
+}
+
+/**
+ * Keeps sending discovery requests, with exponential backoff.
+ */
+private suspend fun sendDiscoveryRequestsUntilCancelled(
+    serverPort: Int,
+    baseTimeout: Duration = 500.milliseconds,
+    maxTimeout: Duration = 5.seconds
+) {
+    val baseTimeoutMs = baseTimeout.inWholeMilliseconds
+    val maxTimeoutMs = maxTimeout.inWholeMilliseconds
+    var tryCount = 0
+
+    val broadcastAddress = InetAddress.getByName("255.255.255.255")
+    val data =
+        "_logitech-reverse-bonjour._tcp.local.\n${serverPort}".encodeToByteArray()
+
+    while (currentCoroutineContext().isActive) {
+        DatagramSocket().use { socket ->
+            socket.broadcast = true
+            socket.send(DatagramPacket(data, data.size, broadcastAddress, 5224))
         }
-        .toMap()
-}
-
-/** Broadcasts a discovery request to the port the Harmony Hub listens to. */
-private fun sendDiscoveryRequest(serverPort: Int) {
-    DatagramSocket().use { socket ->
-        socket.broadcast = true
-        socket.soTimeout = 1000
-
-        val broadcastAddress = InetAddress.getByName("255.255.255.255")
-        val data =
-            "_logitech-reverse-bonjour._tcp.local.\n${serverPort}".encodeToByteArray()
-        socket.send(DatagramPacket(data, data.size, broadcastAddress, 5224))
+        delay(min(maxTimeoutMs, (2.0.pow(tryCount) * baseTimeoutMs).toLong()))
+        tryCount++
     }
 }

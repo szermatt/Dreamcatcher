@@ -20,4 +20,5 @@
     <string name="preference_hub">Harmony Hub</string>
     <string name="preference_hub_summary">Discover a Harmony Hub on the local network</string>
     <string name="discovered_hub">%1$s (online)</string>
+    <string name="unnamed_hub">Unnamed Hub</string>
 </resources>

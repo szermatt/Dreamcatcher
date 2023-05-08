@@ -3,8 +3,7 @@ package net.gmx.szermatt.dreamcatcher.harmony
 import android.util.Log
 import androidx.annotation.GuardedBy
 import androidx.annotation.IntDef
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.*
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.MAX_DRY_RUN_STEP
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.MAX_STEP
@@ -31,6 +30,7 @@ import java.net.InetAddress
 import java.net.UnknownHostException
 import java.util.concurrent.CancellationException
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.time.Duration.Companion.seconds
 
 /** Sends a power off command to the Harmony hub.  */
 class PowerOffTask(
@@ -52,7 +52,7 @@ class PowerOffTask(
      *
      * @throws CancellationException if the task was stopped before it could be completed
      */
-    @Throws(Exception::class)
+    @ExperimentalCoroutinesApi
     suspend fun run(
         host: String? = null,
         uuid: String? = null,
@@ -63,7 +63,9 @@ class PowerOffTask(
         init()
 
         ensureActive()
-        val address = getAddress(host, uuid)
+        val address = withTimeout(30.seconds) {
+            getAddress(host, uuid)
+        }
         Log.i(TAG, "Connecting to Harmony Hub on ${address}")
         val config = buildConfig(address, port)
         reportProgress(PowerOffStep.STEP_RESOLVED, dryRun)
@@ -87,11 +89,23 @@ class PowerOffTask(
      *
      * @throws UnknownHostException if [host] is invalid or no Hub with the specified UUId answered
      */
-    private fun getAddress(host: String?, uuid: String?): InetAddress {
+    @ExperimentalCoroutinesApi
+    private suspend fun CoroutineScope.getAddress(host: String?, uuid: String?): InetAddress {
         if (host != null) {
             return InetAddress.getByName(host)
         }
-        return discoverHub(uuid = uuid) ?: throw UnknownHostException("No Harmony Hub found")
+
+        val c = discoveryChannel()
+        try {
+            for (hub in c) {
+                if (uuid != null && hub.uuid != hub.uuid) continue
+
+                return InetAddress.getByName(hub.ip)
+            }
+            throw UnknownHostException("No hub found")
+        } finally {
+            c.cancel()
+        }
     }
 
     /**

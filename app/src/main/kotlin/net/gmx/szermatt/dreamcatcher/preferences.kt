@@ -16,14 +16,13 @@ import androidx.preference.PreferenceViewHolder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_FAIL
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_OK
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_UNKNOWN
 import net.gmx.szermatt.dreamcatcher.harmony.DiscoveredHub
-import net.gmx.szermatt.dreamcatcher.harmony.discoveryFlow
+import net.gmx.szermatt.dreamcatcher.harmony.discoveryChannel
 import java.lang.Boolean.parseBoolean
 import java.lang.Integer.parseInt
 
@@ -31,6 +30,7 @@ import java.lang.Integer.parseInt
  * Helper for accessing and changing preferences used by this app.
  */
 class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
+    @ExperimentalCoroutinesApi
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preference, rootKey)
 
@@ -61,7 +61,13 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
             true
         }
         lifecycleScope.launch(Dispatchers.Main) {
-            updateHubList(requireContext(), hubList)
+            try {
+                Log.d(TAG, "updateHubList starts")
+                updateHubList(requireContext(), hubList)
+                Log.d(TAG, "updateHubLis ends")
+            } finally {
+                Log.d(TAG, "updateHubList finally ends")
+            }
         }
 
         test.setSummaryProvider {
@@ -101,33 +107,44 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
         }
     }
 
-    private suspend fun updateHubList(context: Context, hubList: ListPreference) {
-        val hubs = mutableMapOf<String, DiscoveredHub>()
-        hubList.value?.let { hubString ->
-            DiscoveredHub.fromString(hubString)?.let { hub ->
-                hubs[hub.uuid] = hub
-            }
-        }
-        discoveryFlow().collect { hub ->
-            hubs[hub.uuid] = hub
-
-            val selected = hubList.value?.let { DiscoveredHub.fromString(it)?.uuid }
-            hubList.entries = hubs.map { (_, hub) ->
-                context.getString(R.string.discovered_hub, hub.friendlyName)
-            }.toTypedArray()
-            hubList.entryValues = hubs.map { (_, hub) ->
-                hub.toString()
-            }.toTypedArray()
-            if (selected != null) {
-                val index = hubs.keys.indexOf(selected)
-                if (index == -1) {
-                    Log.e(TAG, "Selected value ($selected) missing from map ($hubs)")
-                } else {
-                    hubList.setValueIndex(index)
+    /**
+     * Lets discovery run in the background and add any new hub to [hubList].
+     */
+    @ExperimentalCoroutinesApi
+    private suspend fun updateHubList(context: Context, hubList: ListPreference) =
+        withContext(Dispatchers.Main) {
+            val hubs = mutableMapOf<String, DiscoveredHub>()
+            hubList.value?.let { hubString ->
+                DiscoveredHub.fromString(hubString)?.let { hub ->
+                    hubs[hub.uuid] = hub
                 }
             }
+            val onlineHubs = mutableSetOf<String>()
+
+            for (hub in discoveryChannel()) {
+                Log.d(TAG, "Got hub: $hub")
+                if (onlineHubs.contains(hub.uuid)) continue
+                onlineHubs.add(hub.uuid)
+
+                hubs[hub.uuid] = hub
+                val selected = hubList.value?.let { DiscoveredHub.fromString(it)?.uuid }
+                hubList.entries = hubs.map { (_, hub) ->
+                    context.getString(
+                        R.string.discovered_hub,
+                        hub.friendlyName ?: context.getString(R.string.unnamed_hub)
+                    )
+                }.toTypedArray()
+                hubList.entryValues = hubs.map { (_, hub) ->
+                    hub.toString()
+                }.toTypedArray()
+                val index = selected?.let { hubs.keys.indexOf(selected) } ?: -1
+                if (index >= 0) {
+                    hubList.setValueIndex(index)
+                }
+                Log.d(TAG, "Rebuilt prefs")
+            }
         }
-    }
+
 
     /** Show a fragment that tracks the progress of [request]. */
     private fun showProgress(request: WorkRequest, message: String) {
@@ -263,7 +280,7 @@ class TestResultPreference(
     private var mCross: View? = null
     private var mTicked: View? = null
 
-    constructor(context: Context) : this(context, null) {}
+    constructor(context: Context) : this(context, null)
 
     init {
         widgetLayoutResource = R.layout.result_pref_widget_layout

@@ -1,6 +1,7 @@
 package net.gmx.szermatt.dreamcatcher.harmony
 
 import android.util.Base64
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -28,7 +29,7 @@ class PowerOffTaskTest {
     }
 
     @Test
-    fun run() {
+    fun CoroutineScope.run() {
         initSocketImpl()
         val authSocket = FakeSocket()
         authSocket.dumpAs("auth", Charsets.UTF_8)
