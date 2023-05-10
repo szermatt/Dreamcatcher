@@ -1,4 +1,4 @@
 <resources>
 
-    <style name="Theme.DreamCatcher" parent="@style/Theme.AppCompat.Leanback" />
+    <style name="Theme.Dreamcatcher" parent="@style/Theme.AppCompat.Leanback" />
 </resources>

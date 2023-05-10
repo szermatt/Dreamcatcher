@@ -12,7 +12,7 @@ import androidx.fragment.app.Fragment
 import androidx.work.Data
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
-import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
+import net.gmx.szermatt.dreamcatcher.DreamcatcherApplication.Companion.TAG
 import java.util.*
 import kotlin.math.roundToInt
 

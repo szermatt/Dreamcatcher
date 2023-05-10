@@ -4,7 +4,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.FragmentActivity
-import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
+import net.gmx.szermatt.dreamcatcher.DreamcatcherApplication.Companion.TAG
 
 /**
  * The main activity, containing the settings.
@@ -18,7 +18,7 @@ class TvActivity : FragmentActivity() {
 
         supportFragmentManager.beginTransaction().replace(
             R.id.preferences,
-            DreamCatcherPreferenceFragment()
+            DreamcatcherPreferenceFragment()
         ).commit()
     }
 
@@ -26,18 +26,18 @@ class TvActivity : FragmentActivity() {
         super.onStart()
 
         Log.i(TAG, "started")
-        val prefs = DreamCatcherPreferenceManager(this)
+        val prefs = DreamcatcherPreferenceManager(this)
         mPreferenceListener = prefs.onEnabled {
-            startDreamCatcherService(this)
+            startDreamcatcherService(this)
         }
     }
 
     override fun onDestroy() {
-        val prefs = DreamCatcherPreferenceManager(this)
+        val prefs = DreamcatcherPreferenceManager(this)
         if (prefs.enabled) {
             // This should restart the service in case it's killed with the
             // rest of the app.
-            startDreamCatcherService(this)
+            startDreamcatcherService(this)
         }
 
         prefs.unregister(mPreferenceListener)

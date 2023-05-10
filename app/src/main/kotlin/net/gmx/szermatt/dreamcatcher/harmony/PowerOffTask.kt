@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.annotation.GuardedBy
 import androidx.annotation.IntDef
 import kotlinx.coroutines.*
-import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
+import net.gmx.szermatt.dreamcatcher.DreamcatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.MAX_DRY_RUN_STEP
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.MAX_STEP
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffStep.Companion.STEP_AUTH_CONNECTED

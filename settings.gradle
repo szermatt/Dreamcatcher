@@ -15,5 +15,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "DreamCatcher"
+rootProject.name = "Dreamcatcher"
 include ':app'

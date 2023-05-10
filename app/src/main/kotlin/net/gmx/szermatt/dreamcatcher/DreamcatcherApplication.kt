@@ -3,8 +3,8 @@ package net.gmx.szermatt.dreamcatcher
 import android.app.Application
 
 /** Holds global singleton instances.  */
-class DreamCatcherApplication : Application() {
+class DreamcatcherApplication : Application() {
     companion object {
-        internal const val TAG = "DreamCatcher"
+        internal const val TAG = "Dreamcatcher"
     }
 }

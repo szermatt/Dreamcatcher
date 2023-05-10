@@ -8,25 +8,25 @@ import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.WorkManager
-import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
+import net.gmx.szermatt.dreamcatcher.DreamcatcherApplication.Companion.TAG
 
 
-/** Starts the service indirectly, using [DreamCatcherServiceStarter]. */
-internal fun startDreamCatcherService(context: Context) {
+/** Starts the service indirectly, using [DreamcatcherServiceStarter]. */
+internal fun startDreamcatcherService(context: Context) {
     val intent = Intent()
     intent.action = "startService"
-    intent.setClass(context, DreamCatcherServiceStarter::class.java)
+    intent.setClass(context, DreamcatcherServiceStarter::class.java)
     context.sendBroadcast(intent)
 }
 
 /**
  * Listens to BOOT_COMPLETED and startService intents and starts the service.
  */
-class DreamCatcherServiceStarter : BroadcastReceiver() {
+class DreamcatcherServiceStarter : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (DreamCatcherPreferenceManager(context).enabled) {
+        if (DreamcatcherPreferenceManager(context).enabled) {
             Log.i(TAG, "started by intent ${intent.action}")
-            context.startForegroundService(Intent(context, DreamCatcherService::class.java))
+            context.startForegroundService(Intent(context, DreamcatcherService::class.java))
         }
     }
 }
@@ -38,13 +38,13 @@ class DreamCatcherServiceStarter : BroadcastReceiver() {
  * day dream starts and ends and power everything off through the Harmony Hub, this service needs to
  * stay up and running, as a foreground service, when it is enabled.
  *
- * This service is started by [DreamCatcherServiceStarter] at boot time, when the application
+ * This service is started by [DreamcatcherServiceStarter] at boot time, when the application
  * runs or whenever it is enabled in the the [SharedPreferences]. It stops on its own whenever it is
  * disabled in the preferences.
  */
-class DreamCatcherService : Service() {
+class DreamcatcherService : Service() {
     companion object {
-        private const val CHANNEL_ID = "DreamCatcher"
+        private const val CHANNEL_ID = "Dreamcatcher"
         private const val WORKER_TAG = "powerOff"
     }
 
@@ -66,7 +66,7 @@ class DreamCatcherService : Service() {
 
     override fun onDestroy() {
         if (mRegistered) {
-            DreamCatcherPreferenceManager(this).unregister(mDisabledListener)
+            DreamcatcherPreferenceManager(this).unregister(mDisabledListener)
             mDisabledListener = null
 
             unregisterReceiver(mDreamingStarted)
@@ -83,7 +83,7 @@ class DreamCatcherService : Service() {
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         if (mRegistered) return START_STICKY
 
-        val prefs = DreamCatcherPreferenceManager(this)
+        val prefs = DreamcatcherPreferenceManager(this)
         mDisabledListener = prefs.onDisabled {
             WorkManager.getInstance(this).cancelAllWorkByTag(WORKER_TAG)
             stopService(intent)
@@ -139,9 +139,9 @@ class DreamCatcherService : Service() {
      */
     private fun startForegroundWithNotification() {
         val channel = NotificationChannel(
-            CHANNEL_ID, "DreamCatcher Channel", NotificationManager.IMPORTANCE_DEFAULT
+            CHANNEL_ID, "Dreamcatcher Channel", NotificationManager.IMPORTANCE_DEFAULT
         )
-        channel.description = "DreamCatcher Notifications"
+        channel.description = "Dreamcatcher Notifications"
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         startForeground(
             1, NotificationCompat.Builder(this, CHANNEL_ID)

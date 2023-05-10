@@ -17,7 +17,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
 import kotlinx.coroutines.*
-import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
+import net.gmx.szermatt.dreamcatcher.DreamcatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_FAIL
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_OK
 import net.gmx.szermatt.dreamcatcher.TestResult.Companion.TEST_RESULT_UNKNOWN
@@ -29,17 +29,17 @@ import java.lang.Integer.parseInt
 /**
  * Helper for accessing and changing preferences used by this app.
  */
-class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
+class DreamcatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
     @ExperimentalCoroutinesApi
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preference, rootKey)
 
-        val prefs = DreamCatcherPreferenceManager(requireContext())
+        val prefs = DreamcatcherPreferenceManager(requireContext())
         val delay: Preference =
-            preferenceManager.findPreference(DreamCatcherPreferenceManager.DELAY_KEY)!!
+            preferenceManager.findPreference(DreamcatcherPreferenceManager.DELAY_KEY)!!
         val hubList = preferenceManager.findPreference<ListPreference>("hub")!!
         val test = preferenceManager.findPreference<TestResultPreference>(
-            DreamCatcherPreferenceManager.TEST_KEY
+            DreamcatcherPreferenceManager.TEST_KEY
         )!!
         val powerOff: Preference = preferenceManager.findPreference("powerOff")!!
 
@@ -148,7 +148,7 @@ class DreamCatcherPreferenceFragment : LeanbackPreferenceFragmentCompat() {
 }
 
 /** Helper for accessing and changing the preferences of this app. */
-internal class DreamCatcherPreferenceManager(
+internal class DreamcatcherPreferenceManager(
     private val context: Context,
 ) {
     companion object {
@@ -160,7 +160,7 @@ internal class DreamCatcherPreferenceManager(
 
     private val prefs: SharedPreferences = getDefaultSharedPreferences(context)
 
-    /** Checks whether the [DreamCatcherService] should run. */
+    /** Checks whether the [DreamcatcherService] should run. */
     val enabled: Boolean
         get() = safeGetBoolean(ENABLED_KEY, context.resources.getBoolean(R.bool.enabled_default))
 
@@ -255,7 +255,7 @@ internal class DreamCatcherPreferenceManager(
     }
 }
 
-/** Value for `test` in [DreamCatcherPreferenceManager]. */
+/** Value for `test` in [DreamcatcherPreferenceManager]. */
 @IntDef(TEST_RESULT_UNKNOWN, TEST_RESULT_OK, TEST_RESULT_FAIL)
 @Retention(AnnotationRetention.SOURCE)
 annotation class TestResult {

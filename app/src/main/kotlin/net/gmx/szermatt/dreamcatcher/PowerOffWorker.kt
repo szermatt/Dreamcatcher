@@ -5,7 +5,7 @@ import android.util.Log
 import androidx.annotation.GuardedBy
 import androidx.work.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
+import net.gmx.szermatt.dreamcatcher.DreamcatcherApplication.Companion.TAG
 import net.gmx.szermatt.dreamcatcher.harmony.PowerOffTask
 import java.util.concurrent.CancellationException
 import java.util.concurrent.TimeUnit

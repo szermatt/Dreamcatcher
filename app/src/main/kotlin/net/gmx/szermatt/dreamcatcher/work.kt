@@ -19,7 +19,7 @@ fun cancelWhenBlocked(
     if (isFinal(initial)) return
 
     if (initial == WorkInfo.State.BLOCKED) {
-        Log.i(DreamCatcherApplication.TAG, "${requestId} blocked, cancelling.")
+        Log.i(DreamcatcherApplication.TAG, "${requestId} blocked, cancelling.")
         manager.cancelWorkById(requestId)
         return
     }
@@ -28,12 +28,12 @@ fun cancelWhenBlocked(
             val state = value.state
             when {
                 state == WorkInfo.State.BLOCKED -> {
-                    Log.i(DreamCatcherApplication.TAG, "${requestId} blocked, cancelling.")
+                    Log.i(DreamcatcherApplication.TAG, "${requestId} blocked, cancelling.")
                     liveWorkInfo.removeObserver(this)
                     manager.cancelWorkById(requestId)
                 }
                 isFinal(state) -> {
-                    Log.d(DreamCatcherApplication.TAG, "${requestId} done.")
+                    Log.d(DreamcatcherApplication.TAG, "${requestId} done.")
                     liveWorkInfo.removeObserver(this)
                 }
             }
@@ -52,7 +52,7 @@ fun onWorkDone(
     val liveWorkInfo = manager.getWorkInfoByIdLiveData(requestId)
     val initial = liveWorkInfo.value?.state
     if (initial != null && isFinal(initial)) {
-        Log.d(DreamCatcherApplication.TAG, "${requestId} reached final state ${initial}.")
+        Log.d(DreamcatcherApplication.TAG, "${requestId} reached final state ${initial}.")
         lambda(initial)
         return
     }
@@ -61,7 +61,7 @@ fun onWorkDone(
             val state = value.state
             if (!isFinal(state)) return
 
-            Log.d(DreamCatcherApplication.TAG, "$requestId reached final state ${state}.")
+            Log.d(DreamcatcherApplication.TAG, "$requestId reached final state ${state}.")
             liveWorkInfo.removeObserver(this)
             lambda(state)
         }

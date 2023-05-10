@@ -8,15 +8,15 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <!-- TODO: add a real icon. This is actually displayed, sometimes. -->
     <application
-        android:name="net.gmx.szermatt.dreamcatcher.DreamCatcherApplication"
+        android:name="net.gmx.szermatt.dreamcatcher.DreamcatcherApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:banner="@drawable/banner"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.DreamCatcher" >
+        android:theme="@style/Theme.Dreamcatcher" >
         <receiver
-            android:name="net.gmx.szermatt.dreamcatcher.DreamCatcherServiceStarter"
+            android:name="net.gmx.szermatt.dreamcatcher.DreamcatcherServiceStarter"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -25,10 +25,10 @@
                 <action android:name="startService" />
             </intent-filter>
         </receiver>
-        <service android:enabled="true" android:name="net.gmx.szermatt.dreamcatcher.DreamCatcherService" />
+        <service android:enabled="true" android:name="net.gmx.szermatt.dreamcatcher.DreamcatcherService" />
         <activity
             android:name="net.gmx.szermatt.dreamcatcher.TvActivity"
-            android:theme="@style/Theme.DreamCatcher"
+            android:theme="@style/Theme.Dreamcatcher"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
