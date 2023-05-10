@@ -29,7 +29,7 @@ class PowerOffTaskTest {
     }
 
     @Test
-    fun CoroutineScope.run() {
+    fun run() {
         initSocketImpl()
         val authSocket = FakeSocket()
         authSocket.dumpAs("auth", Charsets.UTF_8)
