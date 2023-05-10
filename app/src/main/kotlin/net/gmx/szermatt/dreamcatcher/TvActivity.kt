@@ -24,16 +24,23 @@ class TvActivity : FragmentActivity() {
 
     override fun onStart() {
         super.onStart()
+
         Log.i(TAG, "started")
         val prefs = DreamCatcherPreferenceManager(this)
-        val intent = serviceIntent(this)
         mPreferenceListener = prefs.onEnabled {
-            startForegroundService(intent)
+            startDreamCatcherService(this)
         }
     }
 
     override fun onDestroy() {
-        DreamCatcherPreferenceManager(this).unregister(mPreferenceListener)
+        val prefs = DreamCatcherPreferenceManager(this)
+        if (prefs.enabled) {
+            // This should restart the service in case it's killed with the
+            // rest of the app.
+            startDreamCatcherService(this)
+        }
+
+        prefs.unregister(mPreferenceListener)
         mPreferenceListener = null
 
         super.onDestroy()

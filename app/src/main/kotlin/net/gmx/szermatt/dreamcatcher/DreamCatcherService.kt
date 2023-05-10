@@ -11,21 +11,37 @@ import androidx.work.WorkManager
 import net.gmx.szermatt.dreamcatcher.DreamCatcherApplication.Companion.TAG
 
 
-/** Intent used to start the DreamCatcherService. */
-internal fun serviceIntent(context: Context) = Intent(context, DreamCatcherService::class.java)
+/** Starts the service indirectly, using [DreamCatcherServiceStarter]. */
+internal fun startDreamCatcherService(context: Context) {
+    val intent = Intent()
+    intent.action = "startService"
+    intent.setClass(context, DreamCatcherServiceStarter::class.java)
+    context.sendBroadcast(intent)
+}
 
 /**
- * AutoStart listens to BOOT_COMPLETED intents and starts the service at boot time.
+ * Listens to BOOT_COMPLETED and startService intents and starts the service.
  */
-class Autostart : BroadcastReceiver() {
+class DreamCatcherServiceStarter : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (DreamCatcherPreferenceManager(context).enabled) {
-            Log.i(TAG, "autostart")
-            context.startForegroundService(serviceIntent(context))
+            Log.i(TAG, "started by intent ${intent.action}")
+            context.startForegroundService(Intent(context, DreamCatcherService::class.java))
         }
     }
 }
 
+/**
+ * A service that tracks DREAMING_STARTED/STOPPED events and launches [PowerOffWorker].
+ *
+ * Catching DREAMING_STARTED/STOPPED requires an active app and service. To be able to track when
+ * day dream starts and ends and power everything off through the Harmony Hub, this service needs to
+ * stay up and running, as a foreground service, when it is enabled.
+ *
+ * This service is started by [DreamCatcherServiceStarter] at boot time, when the application
+ * runs or whenever it is enabled in the the [SharedPreferences]. It stops on its own whenever it is
+ * disabled in the preferences.
+ */
 class DreamCatcherService : Service() {
     companion object {
         private const val CHANNEL_ID = "DreamCatcher"
@@ -67,52 +83,52 @@ class DreamCatcherService : Service() {
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
         if (mRegistered) return START_STICKY
 
-            val prefs = DreamCatcherPreferenceManager(this)
-            mDisabledListener = prefs.onDisabled {
-                WorkManager.getInstance(this).cancelAllWorkByTag(WORKER_TAG)
-                stopService(intent)
-            }
-            if (mDisabledListener == null) return START_STICKY
-
-            mDreamingStarted = object : BroadcastReceiver() {
-                override fun onReceive(context: Context, intent: Intent) {
-                    if (!prefs.enabled) return;
-
-                    val delayInMinutes = prefs.delay
-                    Log.d(
-                        TAG,
-                        "Dreaming started, send power off in ${delayInMinutes}m"
-                    )
-                    WorkManager.getInstance(context).enqueue(
-                        PowerOffWorker.workRequest(
-                            uuid = prefs.hub?.uuid,
-                            delayInMinutes = delayInMinutes,
-                            tag = WORKER_TAG,
-                        )
-                    )
-                }
-            }
-            registerReceiver(mDreamingStarted, IntentFilter(Intent.ACTION_DREAMING_STARTED))
-
-            mDreamingStopped = object : BroadcastReceiver() {
-                override fun onReceive(context: Context, intent: Intent) {
-                    Log.d(TAG, "Dreaming stopped")
-                    WorkManager.getInstance(context).cancelAllWorkByTag(WORKER_TAG)
-                }
-            }
-            registerReceiver(mDreamingStopped, IntentFilter(Intent.ACTION_DREAMING_STOPPED))
-
-            startForegroundWithNotification()
-            mRegistered = true
-
-            // Cancel workers that might be left over from a previous
-            // instance. If, for example, the device crashes after
-            // starting the worker but before it's run, the system
-            // might start the worker once it's up - but not in
-            // daydream state anymore.
+        val prefs = DreamCatcherPreferenceManager(this)
+        mDisabledListener = prefs.onDisabled {
             WorkManager.getInstance(this).cancelAllWorkByTag(WORKER_TAG)
+            stopService(intent)
+        }
+        if (mDisabledListener == null) return START_STICKY
 
-            Log.d(TAG, "Service started with intent " + intent.action)
+        mDreamingStarted = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (!prefs.enabled) return;
+
+                val delayInMinutes = prefs.delay
+                Log.d(
+                    TAG,
+                    "Dreaming started, send power off in ${delayInMinutes}m"
+                )
+                WorkManager.getInstance(context).enqueue(
+                    PowerOffWorker.workRequest(
+                        uuid = prefs.hub?.uuid,
+                        delayInMinutes = delayInMinutes,
+                        tag = WORKER_TAG,
+                    )
+                )
+            }
+        }
+        registerReceiver(mDreamingStarted, IntentFilter(Intent.ACTION_DREAMING_STARTED))
+
+        mDreamingStopped = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                Log.d(TAG, "Dreaming stopped")
+                WorkManager.getInstance(context).cancelAllWorkByTag(WORKER_TAG)
+            }
+        }
+        registerReceiver(mDreamingStopped, IntentFilter(Intent.ACTION_DREAMING_STOPPED))
+
+        startForegroundWithNotification()
+        mRegistered = true
+
+        // Cancel workers that might be left over from a previous
+        // instance. If, for example, the device crashes after
+        // starting the worker but before it's run, the system
+        // might start the worker once it's up - but not in
+        // daydream state anymore.
+        WorkManager.getInstance(this).cancelAllWorkByTag(WORKER_TAG)
+
+        Log.d(TAG, "Service started with intent " + intent.action)
 
         return START_STICKY
     }
