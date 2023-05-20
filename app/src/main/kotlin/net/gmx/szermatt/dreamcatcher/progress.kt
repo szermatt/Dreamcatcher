@@ -97,7 +97,7 @@ class WorkProgressFragment : Fragment(R.layout.progress_fragment) {
         mStateLabel?.visibility = View.GONE
 
         val uuid = UUID.fromString(arguments?.getString("uuid") ?: "")
-        val workManager = WorkManager.getInstance(context!!)
+        val workManager = WorkManager.getInstance(requireContext())
         onWorkInfoChange(workManager, viewLifecycleOwner, uuid) { workInfo ->
             updateProgress(workInfo)
         }
