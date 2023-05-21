@@ -1,4 +1,4 @@
-name: Attash APK/AAB to a new release
+name: Attach APK/AAB to a new release
 
 env:
   main_project_module: app
