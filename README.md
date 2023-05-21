@@ -1,5 +1,7 @@
 # Dreamcatcher
 
+[![test](https://github.com/szermatt/Dreamcatcher/actions/workflows/generate-apk-aab-debug-release.yml/badge.svg)](https://github.com/szermatt/Dreamcatcher/actions/workflows/generate-apk-aab-debug-release.yml)
+
 Dreamcatcher is an Android TV app for powering off a media device
 using a Logitech Harmony Hub when the media device is left unused.
 
