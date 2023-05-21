@@ -1,4 +1,4 @@
-name: Android CI
+name: Build, test and publish APK/AAB
 
 env:
   main_project_module: app
@@ -22,12 +22,6 @@ jobs:
     steps:
       - uses: actions/checkout@v1
 
-      - name: Set current date as env variable
-        run: echo "date_today=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-
-      - name: Set repository name as env variable
-        run: echo "repository_name=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_ENV
-
       - name: Set Up JDK
         uses: actions/setup-java@v1
         with:
@@ -36,34 +30,31 @@ jobs:
       - name: Change wrapper permissions
         run: chmod +x ./gradlew
 
-      # Run Tests Build
       - name: Run gradle tests
         run: ./gradlew test
 
-      # Create APK Debug
-      - name: Build apk debug project (APK) - ${{ env.main_project_module }} module
+      - name: Build apk debug project (APK)
         run: ./gradlew assembleDebug
 
-      # Create APK Release
-      - name: Build apk release project (APK) - ${{ env.main_project_module }} module
+      - name: Build apk release project (APK)
         run: ./gradlew assemble
 
-      - name: Build app bundle release (AAB) - ${{ env.main_project_module }} module
+      - name: Build app bundle release (AAB)
         run: ./gradlew ${{ env.main_project_module }}:bundleRelease
 
-      - name: Upload APK Debug - ${{ env.repository_name }}
+      - name: Upload APK Debug
         uses: actions/upload-artifact@v2
         with:
           name: ${{ env.playstore_name }}-debug.apk
           path: ${{ env.main_project_module }}/build/outputs/apk/debug/app-debug.apk
 
-      - name: Upload APK Release - ${{ env.repository_name }}
+      - name: Upload APK Release
         uses: actions/upload-artifact@v2
         with:
           name: ${{ env.playstore_name }}-release-unsigned.apk
           path: ${{ env.main_project_module }}/build/outputs/apk/release/app-release-unsigned.apk
 
-      - name: Upload AAB (App Bundle) Release - ${{ env.repository_name }}
+      - name: Upload AAB (App Bundle) Release
         uses: actions/upload-artifact@v2
         with:
           name: ${{ env.playstore_name }}-release.aab

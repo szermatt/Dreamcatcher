@@ -1,0 +1,56 @@
+name: Attash APK/AAB to a new release
+
+env:
+  main_project_module: app
+
+  playstore_name: Dreamcatcher
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Set Up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Change wrapper permissions
+        run: chmod +x ./gradlew
+
+      - name: Build apk debug project (APK)
+        run: ./gradlew assembleDebug
+
+      - name: Build apk release project (APK)
+        run: ./gradlew assemble
+
+      - name: Build app bundle release (AAB)
+        run: ./gradlew ${{ env.main_project_module }}:bundleRelease
+
+      - name: Upload APK Debug
+        uses: skx/github-action-publish-binaries@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ env.main_project_module }}/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload APK Release
+        uses: skx/github-action-publish-binaries@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ env.main_project_module }}/build/outputs/apk/release/app-release-unsigned.apk
+
+      - name: Upload AAB (App Bundle) Release
+        uses: skx/github-action-publish-binaries@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ env.main_project_module }}/build/outputs/bundle/release/app-release.aab
