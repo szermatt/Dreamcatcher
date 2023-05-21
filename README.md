@@ -11,6 +11,11 @@ unused might very well turn itself off, but other devices might not,
 such as a TV or a loudspeaker system, or they might turn themselves
 off on a different schedule. 
 
+## COMPATIBILITY
+
+This app requires an Android TV device running Android 11 (API level
+30)
+
 ## PROTOCOL
 
 Communication with the Logitech Harmony Hub uses the XMPP interface
@@ -18,19 +23,12 @@ protocol, described on
 https://github.com/hdurdle/harmony/blob/master/PROTOCOL.md using code
 adapted from https://github.com/tuck182/harmony-java-client.
 
-## Installation
+## INSTALLATION
 
-1. Install Java JDK 11
-2. Checkout the repository
-3. Launch gradle
+You'll find the APK to install on [the releases page](https://github.com/szermatt/Dreamcatcher/releases). 
+Download `app-release-unsigned.apk` from the assets of the last release on that page.
 
-```bash
-git clone https://github.com/szermatt/Dreamcatcher.git
-cd Dreamcatcher
-./gradlew build
-```
-
-## Usage 
+## USAGE 
 
 1. Enable XMPP or your Harmony Hub. On the Harmony app, go to Menu >
    Harmony Setup > Add/Edit Devices & Activities > Remote & Hub >
@@ -49,10 +47,17 @@ device that detects when the device enters the Daydream and sends a
 power off command to the Harmony Hub after the power off delay you've
 chosen.
 
-## COMPATIBILITY
+## COMPILATION
 
-This app requires an Android TV device running Android 11 (API level
-30)
+1. Install Java JDK 11
+2. Checkout the repository
+3. Launch gradle
+
+```bash
+git clone https://github.com/szermatt/Dreamcatcher.git
+cd Dreamcatcher
+./gradlew build
+```
 
 ## CONTRIBUTING
 
